@@ -1,0 +1,2017 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Physical AI Data Engine: Real-Time Multimodal Storage &amp; Latent Retrieval Architecture</title>
+  <meta name="description" content="System design and interactive performance model for real-time robotic telemetry, high-throughput media serialization, and latent vector retrieval." />
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Three.js r128 + GLTFLoader + DRACOLoader + PostProcessing -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/DRACOLoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/environments/RoomEnvironment.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            slate: {
+              850: '#0b1220',
+              900: '#070c16',
+              950: '#03050a',
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+            mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
+          }
+        }
+      }
+    };
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    html, body {
+      margin: 0 !important;
+      padding: 0 !important;
+      background-color: #030712 !important;
+      color: #cbd5e1;
+      font-family: 'Inter', sans-serif;
+      overflow-x: hidden;
+      width: 100%;
+    }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+
+    #webgl-bg {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    .glass-card {
+      background: rgba(7, 12, 22, 0.88);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.85);
+    }
+
+    .stage-card {
+      transition: border-color 0.4s ease, box-shadow 0.4s ease, transform 0.4s ease;
+    }
+    .stage-card.active-stage {
+      border-color: rgba(56, 189, 248, 0.7);
+      box-shadow: 0 0 50px -10px rgba(14, 165, 233, 0.4);
+    }
+
+    .scroll-dot {
+      transition: all 0.3s ease;
+    }
+    .scroll-dot.active {
+      background-color: #38bdf8;
+      transform: scale(1.45);
+      box-shadow: 0 0 12px #38bdf8;
+    }
+
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: #030712; }
+    ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #38bdf8; }
+  </style>
+</head>
+<body class="selection:bg-cyan-500 selection:text-slate-950">
+
+  <!-- FULL-VIEWPORT FIXED 3D HARDWARE TOWER & MATRIX BIT STREAM CANVAS -->
+  <canvas id="webgl-bg"></canvas>
+
+  <!-- RIGHT-HAND VERTICAL SCROLL PROGRESS RAIL -->
+  <div class="fixed right-5 top-1/2 -translate-y-1/2 z-40 hidden xl:flex flex-col items-center gap-4 glass-card px-2.5 py-4 rounded-full border border-slate-800/80">
+    <a href="#sec-hero" title="0. The Problem" class="scroll-dot active w-2.5 h-2.5 rounded-full bg-slate-600" data-dot="0"></a>
+    <a href="#sec-solution" title="The Solution" class="scroll-dot w-2.5 h-2.5 rounded-full bg-slate-600" data-dot="1"></a>
+    <a href="#stage-1" title="1. Telemetry Ingest" class="scroll-dot w-2.5 h-2.5 rounded-full bg-slate-600" data-dot="2"></a>
+    <a href="#stage-2" title="2. Storage Serialization" class="scroll-dot w-2.5 h-2.5 rounded-full bg-slate-600" data-dot="3"></a>
+    <a href="#stage-3" title="3. Ingestion Bus" class="scroll-dot w-2.5 h-2.5 rounded-full bg-slate-600" data-dot="4"></a>
+    <a href="#stage-4" title="4. Vector Retrieval" class="scroll-dot w-2.5 h-2.5 rounded-full bg-slate-600" data-dot="5"></a>
+    <a href="#stage-5" title="5. Direct-to-GPU" class="scroll-dot w-2.5 h-2.5 rounded-full bg-slate-600" data-dot="6"></a>
+    <a href="#sec-economics" title="6. Fleet Sizer" class="scroll-dot w-2.5 h-2.5 rounded-full bg-slate-600" data-dot="7"></a>
+  </div>
+
+  <!-- FLOATING BOTTOM-RIGHT LIVE TELEMETRY PILL -->
+  <div class="fixed bottom-5 right-5 z-40 hidden sm:flex items-center gap-4 glass-card px-4 py-2.5 rounded-2xl border border-slate-800/90 font-mono text-xs">
+    <div class="flex items-center gap-2">
+      <span id="live-dot" class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+      <span id="hud-stage-name" class="text-white font-bold">STAGE 00: OPEN ARCHITECTURE HUB</span>
+    </div>
+    <div class="h-4 w-[1px] bg-slate-800"></div>
+    <div class="text-slate-400">
+      Bit Stream: <span id="hud-stream" class="text-emerald-400 font-bold">10101001</span>
+    </div>
+    <div class="h-4 w-[1px] bg-slate-800"></div>
+    <div class="text-slate-400">
+      H100 Tensor Util: <span id="hud-gpu" class="text-emerald-400 font-bold">94.8%</span>
+    </div>
+  </div>
+
+  <!-- STICKY TOP HEADER -->
+  <header class="sticky top-0 z-50 glass-card border-b border-slate-800/80 px-4 sm:px-8 py-3">
+    <div class="max-w-[1700px] mx-auto flex items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-400 via-sky-300 to-emerald-400 flex items-center justify-center font-black text-slate-950 text-sm shadow-lg shadow-cyan-500/20">
+          PAI
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-sm font-extrabold text-white tracking-tight">Physical AI Data Engine</span>
+            <span class="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 font-semibold">Open System Architecture</span>
+          </div>
+          <p class="text-[11px] text-slate-400 font-mono hidden md:block">Real-Time Multimodal Storage &amp; Latent Retrieval Architecture</p>
+        </div>
+      </div>
+
+      <nav class="hidden xl:flex items-center gap-1 text-xs font-mono">
+        <a href="#sec-hero" class="px-2.5 py-1.5 rounded-lg text-rose-400 hover:bg-slate-800/60 transition">0. The Problem</a>
+        <a href="#sec-solution" class="px-2.5 py-1.5 rounded-lg text-emerald-400 hover:bg-slate-800/60 transition">The Solution</a>
+        <a href="#stage-1" class="px-2.5 py-1.5 rounded-lg text-sky-400 hover:bg-slate-800/60 transition">1. Telemetry Ingest</a>
+        <a href="#stage-2" class="px-2.5 py-1.5 rounded-lg text-indigo-400 hover:bg-slate-800/60 transition">2. Storage Serialization</a>
+        <a href="#stage-3" class="px-2.5 py-1.5 rounded-lg text-amber-400 hover:bg-slate-800/60 transition">3. Ingestion Bus</a>
+        <a href="#stage-4" class="px-2.5 py-1.5 rounded-lg text-emerald-400 hover:bg-slate-800/60 transition">4. Vector Retrieval</a>
+        <a href="#stage-5" class="px-2.5 py-1.5 rounded-lg text-purple-400 hover:bg-slate-800/60 transition">5. Direct-to-GPU</a>
+        <a href="#sec-economics" class="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800/60 transition">6. Fleet Sizer</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- ======================================================================= -->
+  <!-- FOREGROUND SCROLLABLE CONTENT (TEXT ON LEFT 70-75%) -->
+  <!-- ======================================================================= -->
+  <main class="relative z-10 max-w-[1700px] mx-auto px-4 sm:px-6 lg:px-8">
+
+    <!-- HERO & THE PROBLEM -->
+    <section id="sec-hero" class="min-h-screen flex flex-col justify-center py-16 space-y-10">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+        <div class="lg:col-span-8 glass-card p-7 sm:p-10 rounded-3xl space-y-6 border border-slate-800/90">
+          <div class="inline-flex items-center gap-2 text-xs font-mono text-cyan-400 bg-cyan-500/10 px-3 py-1 rounded-full border border-cyan-500/20">
+            <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+            OPEN SYSTEM DESIGN SPECIFICATION &bull; EMBODIED AI ENGINE
+          </div>
+
+          <div class="space-y-2">
+            <h1 class="text-3xl sm:text-5xl font-black text-white tracking-tight leading-[1.1]">
+              Physical AI Data Engine
+            </h1>
+            <p class="text-xl sm:text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-sky-300 to-emerald-400 tracking-tight">
+              Real-Time Multimodal Storage &amp; Latent Retrieval Architecture
+            </p>
+            <div class="mt-4 pt-3 border-t border-slate-800 flex items-center gap-3">
+              <span class="text-xs font-mono uppercase tracking-widest font-black text-rose-400 bg-rose-500/15 px-2.5 py-1 rounded border border-rose-500/30">00 / The Problem</span>
+              <span class="text-sm font-bold text-white tracking-tight">Why Traditional Systems Break at the Physical AI Data Wall</span>
+            </div>
+          </div>
+
+          <p class="text-sm sm:text-base text-slate-300 leading-relaxed max-w-4xl">
+            Generative World Models and Vision-Language-Action (VLA) policies are fundamentally throttled not by model parameter counts, but by multimodal data plumbing. Existing cloud data warehouses and recording formats were engineered for static documents, web analytics, or human video playback; subjecting them to continuous, high-frequency robotics rollouts triggers severe architectural failures across storage, clock synchronization, and compute utilization.
+          </p>
+        </div>
+        <div class="lg:col-span-4 hidden lg:block"></div>
+      </div>
+
+      <!-- 3 FAILURES -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div class="lg:col-span-8 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="glass-card p-5 rounded-2xl border border-rose-500/30 space-y-2.5">
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-rose-500/15 text-rose-400 border border-rose-500/30">01 &bull; STORAGE WASTE</span>
+              <i data-lucide="hard-drive-download" class="w-4 h-4 text-rose-400"></i>
+            </div>
+            <h3 class="text-sm font-bold text-white">Network &amp; Ingest Bottlenecks</h3>
+            <p class="text-xs text-slate-300 leading-relaxed">
+              When an ML researcher needs to inspect a 2 MB IMU torque spike to debug an unstable balance controller, legacy systems force them to download an entire <strong class="text-rose-300">10 GB uncompressed video blob</strong> over object storage, inducing severe network egress costs and disk I/O thrashing.
+            </p>
+          </div>
+          <div class="glass-card p-5 rounded-2xl border border-amber-500/30 space-y-2.5">
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-amber-500/15 text-amber-400 border border-amber-500/30">02 &bull; CLOCK DRIFT</span>
+              <i data-lucide="clock" class="w-4 h-4 text-amber-400"></i>
+            </div>
+            <h3 class="text-sm font-bold text-white">Clock Asynchrony &amp; Causality Drift</h3>
+            <p class="text-xs text-slate-300 leading-relaxed">
+              Cameras expose frames at fixed periodic intervals (<code class="text-amber-300 font-mono">33.3 ms</code>), while IMUs and joint actuators fire asynchronously (<code class="text-amber-300 font-mono">1.0 ms</code> to <code class="text-amber-300 font-mono">5.0 ms</code>). Independent crystal oscillator drift corrupts physical causality across long operational shifts.
+            </p>
+          </div>
+          <div class="glass-card p-5 rounded-2xl border border-purple-500/30 space-y-2.5">
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-purple-500/15 text-purple-400 border border-purple-500/30">03 &bull; GPU STARVATION</span>
+              <i data-lucide="flame" class="w-4 h-4 text-purple-400"></i>
+            </div>
+            <h3 class="text-sm font-bold text-white">Host CPU Starvation on GPU Clusters</h3>
+            <p class="text-xs text-slate-300 leading-relaxed">
+              Decoding compressed video chunks sequentially on host CPU cores and copying tensors across PCIe leaves $30,000 NVIDIA H100 GPUs idle with <strong class="text-purple-300">low tensor utilization</strong>, spending more cycles stalling on data decompression than executing forward and backward passes.
+            </p>
+          </div>
+        </div>
+        <div class="lg:col-span-4 hidden lg:block"></div>
+      </div>
+    </section>
+
+    <!-- THE SOLUTION: HIGH-LEVEL EXECUTIVE ARCHITECTURE OVERVIEW -->
+    <section id="sec-solution" class="min-h-screen flex flex-col justify-center py-20 space-y-8">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+        <div class="lg:col-span-8 glass-card p-7 sm:p-10 rounded-3xl space-y-7 border border-emerald-500/40 shadow-2xl shadow-emerald-500/10">
+          
+          <div class="border-b border-slate-800 pb-5">
+            <div class="flex flex-wrap items-center gap-3 sm:gap-4 p-3.5 sm:p-4 rounded-2xl bg-emerald-500/15 border border-emerald-500/40">
+              <span class="text-xl sm:text-2xl font-mono font-black tracking-tight text-emerald-400">THE SOLUTION</span>
+              <span class="h-6 w-[2px] bg-emerald-500/40"></span>
+              <span class="text-base sm:text-xl font-extrabold tracking-wide text-white uppercase">Decoupled Physical AI Data Architecture</span>
+              <span class="ml-auto text-xs font-mono uppercase px-2.5 py-1 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold">Macro Pipeline Overview</span>
+            </div>
+          </div>
+
+          <div class="space-y-4">
+            <h2 class="text-xl sm:text-3xl font-extrabold text-white tracking-tight leading-tight">
+              An End-to-End Pipeline from Sub-Millisecond Edge Ingest to Zero-Starvation GPU Clusters
+            </h2>
+            <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
+              Rather than forcing multimodal robotics streams into monolithic archive files or general-purpose cloud databases, this architecture decouples the lifecycle of physical data into <strong class="text-white">five purpose-built pipeline stages</strong> detailed below. Each stage directly resolves a physical systems bottleneck:
+            </p>
+          </div>
+
+          <!-- 5-Stage High-Level Roadmap -->
+          <div class="grid grid-cols-1 sm:grid-cols-5 gap-2.5 text-xs font-mono">
+            <a href="#stage-1" class="p-3 rounded-2xl bg-slate-900/90 border border-sky-500/30 hover:border-sky-400 transition block space-y-1">
+              <span class="text-[10px] text-sky-400 font-bold block">STAGE 01</span>
+              <span class="text-white font-bold block text-[11px]">Telemetry Ingest</span>
+              <span class="text-[10px] text-slate-400 block font-sans">POSIX SHM ring buffers isolate real-time robot control loops.</span>
+            </a>
+            <a href="#stage-2" class="p-3 rounded-2xl bg-slate-900/90 border border-indigo-500/30 hover:border-indigo-400 transition block space-y-1">
+              <span class="text-[10px] text-indigo-400 font-bold block">STAGE 02</span>
+              <span class="text-white font-bold block text-[11px]">Serialization</span>
+              <span class="text-[10px] text-slate-400 block font-sans">Splits video into short GOPs and telemetry into columnar Parquet.</span>
+            </a>
+            <a href="#stage-3" class="p-3 rounded-2xl bg-slate-900/90 border border-amber-500/30 hover:border-amber-400 transition block space-y-1">
+              <span class="text-[10px] text-amber-400 font-bold block">STAGE 03</span>
+              <span class="text-white font-bold block text-[11px]">Ingestion Bus</span>
+              <span class="text-[10px] text-slate-400 block font-sans">NVMe tiered buffering &amp; asynchronous micro-batching into object storage.</span>
+            </a>
+            <a href="#stage-4" class="p-3 rounded-2xl bg-slate-900/90 border border-emerald-500/30 hover:border-emerald-400 transition block space-y-1">
+              <span class="text-[10px] text-emerald-400 font-bold block">STAGE 04</span>
+              <span class="text-white font-bold block text-[11px]">Vector Retrieval</span>
+              <span class="text-[10px] text-slate-400 block font-sans">ANN vector index maps semantic queries directly to storage byte offsets.</span>
+            </a>
+            <a href="#stage-5" class="p-3 rounded-2xl bg-slate-900/90 border border-purple-500/30 hover:border-purple-400 transition block space-y-1">
+              <span class="text-[10px] text-purple-400 font-bold block">STAGE 05</span>
+              <span class="text-white font-bold block text-[11px]">Direct-to-GPU</span>
+              <span class="text-[10px] text-slate-400 block font-sans">Kernel-bypassing DMA + on-GPU NVDEC silicon decoders feed VRAM.</span>
+            </a>
+          </div>
+
+          <!-- THE 4 TARGET PERFORMANCE METRICS (DEFENSIBLE) -->
+          <div class="space-y-2 pt-2">
+            <span class="text-[11px] font-mono font-bold text-slate-400 uppercase tracking-wider block">Solution Quantitative Performance Targets</span>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 font-mono">
+              <div class="p-3.5 rounded-2xl bg-slate-900/90 border border-sky-500/30 space-y-1">
+                <span class="text-[10px] text-slate-400 uppercase block">Edge Handover Latency</span>
+                <span class="text-xl font-black text-sky-400">&lt; 1 ms</span>
+                <span class="text-[10px] text-slate-500 block">Zero-Copy POSIX SHM</span>
+              </div>
+              <div class="p-3.5 rounded-2xl bg-slate-900/90 border border-amber-500/30 space-y-1">
+                <span class="text-[10px] text-slate-400 uppercase block">Latent Footprint</span>
+                <span class="text-xl font-black text-amber-400">&lt; 0.1%</span>
+                <span class="text-[10px] text-slate-500 block">Quantized Vector Index</span>
+              </div>
+              <div class="p-3.5 rounded-2xl bg-slate-900/90 border border-emerald-500/30 space-y-1">
+                <span class="text-[10px] text-slate-400 uppercase block">Semantic Seek</span>
+                <span class="text-xl font-black text-emerald-400">&lt; 5 ms</span>
+                <span class="text-[10px] text-slate-500 block">Sub-5ms ANN Latent Seek</span>
+              </div>
+              <div class="p-3.5 rounded-2xl bg-slate-900/90 border border-purple-500/30 space-y-1">
+                <span class="text-[10px] text-slate-400 uppercase block">H100 Tensor Core Util</span>
+                <span class="text-xl font-black text-purple-400">&gt; 92%</span>
+                <span class="text-[10px] text-slate-500 block">DMA via NVDEC</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+        <div class="lg:col-span-4 hidden lg:block"></div>
+      </div>
+    </section>
+
+    <!-- STAGE 1 -->
+    <section id="stage-1" data-stage-index="1" class="min-h-screen flex items-center py-24">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 w-full items-center">
+        <div class="lg:col-span-8 stage-card glass-card p-7 sm:p-10 rounded-3xl space-y-6">
+          
+          <div class="border-b border-slate-800 pb-5">
+            <div class="flex flex-wrap items-center gap-3 sm:gap-4 p-3.5 sm:p-4 rounded-2xl bg-sky-500/15 border border-sky-500/40 shadow-xl shadow-sky-500/10">
+              <span class="text-2xl sm:text-4xl font-mono font-black tracking-tight text-sky-400">STAGE 01</span>
+              <span class="h-6 sm:h-8 w-[3px] bg-sky-500/50"></span>
+              <span class="text-lg sm:text-2xl font-extrabold tracking-wide text-white uppercase">High-Frequency Telemetry Ingest &amp; Monotonic Alignment</span>
+              <span class="ml-auto text-xs font-mono uppercase px-2.5 py-1 rounded bg-sky-500/20 text-sky-300 border border-sky-500/30 font-bold">Zero-Copy Ring Buffering</span>
+            </div>
+          </div>
+
+          <div>
+            <h2 class="text-xl sm:text-3xl font-extrabold text-white tracking-tight leading-tight">
+              Zero-Copy POSIX Shared Memory &amp; Hardware Clock Drift Compensation
+            </h2>
+            <p class="text-xs sm:text-sm text-sky-300/90 font-mono mt-1">
+              An operating-system-level shared memory ingestion layer that decouples physical sensor capture from persistence daemons without incurring CPU memory copies or control loop jitter.
+            </p>
+          </div>
+
+          <!-- Problem & Solution -->
+          <div class="space-y-4 text-xs sm:text-sm text-slate-300 leading-relaxed">
+            <div class="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-1.5">
+              <span class="font-mono text-xs font-bold text-rose-400 uppercase tracking-wider block">The Problem to Solve</span>
+              <p>
+                Autonomous robots capture massive volumes of sensory data simultaneously: multi-camera 4K RGB feeds (60 FPS), raw LiDAR point clouds, and high-frequency (1000 Hz) IMUs. If device drivers pass these data streams to logging daemons using standard OS sockets, network loops, or Unix pipes, the operating system executes repeated user-to-kernel memory copies (<code class="text-rose-300 font-mono">memcpy</code>). This burns critical CPU cycles, saturates memory bus bandwidth, and evicts L2/L3 caches—inducing non-deterministic latency spikes (jitter) in the robot's real-time physical control loop.
+              </p>
+            </div>
+
+            <div class="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-2">
+              <span class="font-mono text-xs font-bold text-sky-400 uppercase tracking-wider block">The Solution</span>
+              <ul class="space-y-1.5 list-disc pl-5">
+                <li><strong class="text-white">Isolation of Real-Time Loops:</strong> It provides a zero-latency memory boundary that decouples hardware device drivers from asynchronous logging and analytics consumers.</li>
+                <li><strong class="text-white">Deterministic Allocation:</strong> It pre-allocates memory pages at system boot, ensuring the operating system never invokes heap allocations or page fault handlers.</li>
+                <li><strong class="text-white">Hardware-Level Clock Drift Compensation:</strong> It regresses hardware interrupt timestamps against monotonic kernel timers, establishing a drift-free reference timeline across all modalities.</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- HTML Block Diagram with Explicit Input & Output Blocks -->
+          <div class="space-y-1.5">
+            <span class="font-mono text-[11px] font-bold text-slate-400 uppercase">Subsystem Block Diagram &bull; Ingestion Data Flow &amp; Memory Bounds</span>
+            
+            <div class="p-6 rounded-2xl bg-slate-950/80 border border-slate-800 font-mono text-[11px] flex flex-col items-center gap-3">
+              <!-- EXPLICIT INPUT BLOCK -->
+              <div class="w-full max-w-lg p-3 rounded-xl bg-slate-900/95 border-2 border-dashed border-sky-500/40 flex items-center justify-between px-4">
+                <span class="px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 text-[10px] font-bold uppercase tracking-wider border border-sky-500/30">INPUT</span>
+                <span class="text-slate-300 text-[11px]">Raw YUV420 video frames &bull; 64-byte IMU packets &bull; Joint torques</span>
+              </div>
+              
+              <i data-lucide="arrow-down" class="w-4 h-4 text-sky-400"></i>
+
+              <div class="w-full max-w-sm p-3 rounded-xl bg-slate-900 border border-slate-700 text-center text-slate-300">
+                <div class="font-bold text-white mb-1">Hardware Sensor Drivers</div>
+                <div class="text-[9px] text-slate-500">MIPI CSI-2 Cameras &bull; USB3 LiDAR &bull; SPI IMUs</div>
+              </div>
+              
+              <div class="flex flex-col items-center text-sky-400 text-[10px]">
+                <span class="mb-1">Direct DMA Write (Hardware Clock Intercept)</span>
+                <i data-lucide="arrow-down" class="w-4 h-4"></i>
+              </div>
+
+              <div class="w-full max-w-lg p-4 rounded-xl bg-sky-950/20 border border-sky-500/40 text-center">
+                <div class="font-bold text-sky-400 text-xs mb-2">POSIX Shared Memory Region</div>
+                <div class="inline-flex gap-2 p-2 bg-slate-950 rounded-lg border border-slate-800">
+                  <span class="px-2 py-1 bg-slate-900 rounded text-slate-400 text-[10px]">SPSC Lock-Free Ring</span>
+                  <span class="px-2 py-1 bg-sky-500/20 text-sky-300 rounded text-[10px] border border-sky-500/30">Slot 0</span>
+                  <span class="px-2 py-1 bg-sky-500/20 text-sky-300 rounded text-[10px] border border-sky-500/30">Slot 1</span>
+                  <span class="px-2 py-1 bg-sky-500/20 text-sky-300 rounded text-[10px] border border-sky-500/30">Slot N</span>
+                </div>
+              </div>
+
+              <div class="flex w-full max-w-lg justify-around text-slate-500 text-[10px] pt-1">
+                <div class="flex flex-col items-center">
+                  <i data-lucide="arrow-down-left" class="w-4 h-4 mb-1"></i>
+                  <span>Zero-Copy Direct Pointer</span>
+                </div>
+                <div class="flex flex-col items-center">
+                  <i data-lucide="arrow-down-right" class="w-4 h-4 mb-1"></i>
+                  <span>Zero-Copy Direct Pointer</span>
+                </div>
+              </div>
+
+              <div class="flex w-full max-w-lg gap-4">
+                <div class="flex-1 p-3 rounded-xl bg-slate-900 border border-slate-700 text-center flex items-center justify-center">
+                  <span class="text-slate-300 font-bold">Real-Time VLA Policy<br><span class="text-[9px] font-normal text-slate-500">(Deterministic Inference)</span></span>
+                </div>
+                <div class="flex-1 p-3 rounded-xl bg-slate-900 border border-slate-700 text-center flex items-center justify-center">
+                  <span class="text-slate-300 font-bold">Async Storage Daemon<br><span class="text-[9px] font-normal text-slate-500">(Stage 02 Serialization)</span></span>
+                </div>
+              </div>
+
+              <i data-lucide="arrow-down" class="w-4 h-4 text-emerald-400"></i>
+
+              <!-- EXPLICIT OUTPUT BLOCK -->
+              <div class="w-full max-w-lg p-3 rounded-xl bg-slate-900/95 border-2 border-dashed border-emerald-500/40 flex items-center justify-between px-4">
+                <span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-bold uppercase tracking-wider border border-emerald-500/30">OUTPUT</span>
+                <span class="text-slate-300 text-[11px]">Memory-mapped slot pointers &bull; Monotonic sequence counters</span>
+              </div>
+            </div>
+          </div>
+
+          <pre class="p-4 rounded-2xl bg-slate-950 border border-slate-800/90 font-mono text-[11px] text-sky-300 overflow-x-auto leading-relaxed">struct alignas(64) SpscRingBuffer {
+    std::atomic&lt;uint64_t&gt; head{0}; // Producer index (Isolated Cache Line 0)
+    char pad[56];                  // Prevent false sharing
+    std::atomic&lt;uint64_t&gt; tail{0}; // Consumer index (Isolated Cache Line 1)
+};
+// Zero-Copy Commit: Bypasses kernel network stack &amp; eliminates control loop jitter
+slots[h &amp; BUFFER_MASK].dma_transfer(sensor_frame);
+ring_buffer-&gt;head.store(h + 1, std::memory_order_release);</pre>
+        </div>
+        <div class="lg:col-span-4 hidden lg:block"></div>
+      </div>
+    </section>
+
+    <!-- STAGE 2 -->
+    <section id="stage-2" data-stage-index="2" class="min-h-screen flex items-center py-24">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 w-full items-center">
+        <div class="lg:col-span-8 stage-card glass-card p-7 sm:p-10 rounded-3xl space-y-6">
+          
+          <div class="border-b border-slate-800 pb-5">
+            <div class="flex flex-wrap items-center gap-3 sm:gap-4 p-3.5 sm:p-4 rounded-2xl bg-indigo-500/15 border border-indigo-500/40 shadow-xl shadow-indigo-500/10">
+              <span class="text-2xl sm:text-4xl font-mono font-black tracking-tight text-indigo-400">STAGE 02</span>
+              <span class="h-6 sm:h-8 w-[3px] bg-indigo-500/50"></span>
+              <span class="text-lg sm:text-2xl font-extrabold tracking-wide text-white uppercase">Modality-Specific Storage Serialization</span>
+              <span class="ml-auto text-xs font-mono uppercase px-2.5 py-1 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-bold">Split-Tier Formats</span>
+            </div>
+          </div>
+
+          <div>
+            <h2 class="text-xl sm:text-3xl font-extrabold text-white tracking-tight leading-tight">
+              Short-GOP Keyframe Video Chunking &amp; Vectorized Columnar Telemetry
+            </h2>
+            <p class="text-xs sm:text-sm text-indigo-300/90 font-mono mt-1">
+              A specialized dual-tier serialization engine that splits high-bandwidth video and dense telemetry into format-optimal representations with nanosecond byte-range mapping.
+            </p>
+          </div>
+
+          <!-- Problem & Solution -->
+          <div class="space-y-4 text-xs sm:text-sm text-slate-300 leading-relaxed">
+            <div class="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-1.5">
+              <span class="font-mono text-xs font-bold text-rose-400 uppercase tracking-wider block">The Problem to Solve</span>
+              <p>
+                Storing raw multi-sensor streams into monolithic sequential files (such as legacy ROS bags or raw MP4 containers) forces query systems to scan and decompress gigabytes of interleaved video frames simply to inspect numerical time-series. Furthermore, traditional video compression uses long GOPs (Group of Pictures), requiring hundreds of preceding frames to be decoded just to access a single critical action step.
+              </p>
+            </div>
+
+            <div class="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-2">
+              <span class="font-mono text-xs font-bold text-indigo-400 uppercase tracking-wider block">The Solution</span>
+              <ul class="space-y-1.5 list-disc pl-5">
+                <li><strong class="text-white">Short-GOP Video Chunking:</strong> Encodes camera streams into 0.5-second independently decodable H.265 chunks with dedicated frame-to-byte indexes, enabling instant random access.</li>
+                <li><strong class="text-white">Vectorized Columnar Storage:</strong> Flushes high-rate IMUs, joint encoders, and proprioceptive sensors into Apache Parquet / Arrow columnar slabs, achieving &gt;80% compression and instant SIMD scan speed.</li>
+                <li><strong class="text-white">Unified Byte Catalog:</strong> Generates a lightweight manifest linking global nanosecond timestamps to exact byte ranges across both media and tabular tiers.</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- HTML Block Diagram -->
+          <div class="space-y-1.5">
+            <span class="font-mono text-[11px] font-bold text-slate-400 uppercase">Subsystem Block Diagram &bull; Modality Splitting &amp; Index Mapping</span>
+            
+            <div class="p-6 rounded-2xl bg-slate-950/80 border border-slate-800 font-mono text-[11px] flex flex-col items-center gap-3">
+              <div class="w-full max-w-sm p-3 rounded-xl bg-slate-900 border border-slate-700 text-center text-slate-300">
+                <div class="font-bold text-white mb-1">Normalized Stream from Stage 01</div>
+                <div class="text-[9px] text-slate-500">(Monotonic Ring Buffer Frames)</div>
+              </div>
+              
+              <i data-lucide="arrow-down" class="w-4 h-4 text-indigo-400"></i>
+
+              <div class="w-full max-w-sm p-3 rounded-xl bg-indigo-950/30 border border-indigo-500/40 text-center">
+                <div class="font-bold text-indigo-400 text-xs">Modal Demux &amp; Serialization Splitter</div>
+                <div class="text-[9px] text-indigo-300/70 mt-1">Isolates high-throughput pixels from structured telemetry</div>
+              </div>
+
+              <div class="flex w-full max-w-lg justify-around text-slate-500 text-[10px] pt-1">
+                <div class="flex flex-col items-center">
+                  <span class="mb-1 text-sky-400 font-bold">Visual Tier</span>
+                  <i data-lucide="arrow-down-left" class="w-4 h-4 text-sky-400"></i>
+                </div>
+                <div class="flex flex-col items-center">
+                  <span class="mb-1 text-emerald-400 font-bold">Telemetry Tier</span>
+                  <i data-lucide="arrow-down-right" class="w-4 h-4 text-emerald-400"></i>
+                </div>
+              </div>
+
+              <div class="flex w-full max-w-lg gap-4">
+                <div class="flex-1 p-4 rounded-xl bg-slate-900 border border-slate-700 text-left space-y-2">
+                  <div class="text-sky-400 font-bold border-b border-slate-700 pb-1">SHORT-GOP H.265</div>
+                  <ul class="text-[9px] text-slate-300 space-y-1 list-disc pl-3">
+                    <li>0.5s Independent Keyframe GOPs</li>
+                    <li>Exact Frame-to-Byte Offset Index</li>
+                    <li>Zero-Seek Random Access</li>
+                  </ul>
+                </div>
+                <div class="flex-1 p-4 rounded-xl bg-slate-900 border border-slate-700 text-left space-y-2">
+                  <div class="text-emerald-400 font-bold border-b border-slate-700 pb-1">APACHE ARROW / PARQUET</div>
+                  <ul class="text-[9px] text-slate-300 space-y-1 list-disc pl-3">
+                    <li>Snappy/ZSTD Columnar Slabs</li>
+                    <li>&gt;80% Lossless Compression</li>
+                    <li>Direct SIMD Vector Filtering</li>
+                  </ul>
+                </div>
+              </div>
+
+              <div class="flex w-full max-w-lg justify-around text-slate-500 pt-1">
+                <i data-lucide="arrow-down-right" class="w-4 h-4"></i>
+                <i data-lucide="arrow-down-left" class="w-4 h-4"></i>
+              </div>
+
+              <div class="w-full max-w-sm p-3 rounded-xl bg-indigo-950/20 border border-indigo-500/30 text-center">
+                <div class="font-bold text-indigo-300">Unified Storage Catalog Index</div>
+                <div class="text-[9px] text-slate-400 mt-1">Nanosecond Timestamps &rarr; Exact Storage Byte Ranges</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+        <div class="lg:col-span-4 hidden lg:block"></div>
+      </div>
+    </section>
+
+    <!-- STAGE 3 -->
+    <section id="stage-3" data-stage-index="3" class="min-h-screen flex items-center py-24">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 w-full items-center">
+        <div class="lg:col-span-8 stage-card glass-card p-7 sm:p-10 rounded-3xl space-y-6">
+          
+          <div class="border-b border-slate-800 pb-5">
+            <div class="flex flex-wrap items-center gap-3 sm:gap-4 p-3.5 sm:p-4 rounded-2xl bg-amber-500/15 border border-amber-500/40 shadow-xl shadow-amber-500/10">
+              <span class="text-2xl sm:text-4xl font-mono font-black tracking-tight text-amber-400">STAGE 03</span>
+              <span class="h-6 sm:h-8 w-[3px] bg-amber-500/50"></span>
+              <span class="text-lg sm:text-2xl font-extrabold tracking-wide text-white uppercase">Distributed Ingestion Bus &amp; Multi-Tier Storage</span>
+              <span class="ml-auto text-xs font-mono uppercase px-2.5 py-1 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold">NVMe &bull; S3 Write-Through</span>
+            </div>
+          </div>
+
+          <div>
+            <h2 class="text-xl sm:text-3xl font-extrabold text-white tracking-tight leading-tight">
+              NVMe Local Buffer Cache &amp; Write-Through Asynchronous Micro-Batching
+            </h2>
+            <p class="text-xs sm:text-sm text-amber-300/90 font-mono mt-1">
+              A high-throughput distributed ingestion bus that buffers real-time robot streams across local enterprise NVMe arrays before persisting them into cost-optimized cloud object storage.
+            </p>
+          </div>
+
+          <!-- Problem & Solution -->
+          <div class="space-y-4 text-xs sm:text-sm text-slate-300 leading-relaxed">
+            <div class="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-1.5">
+              <span class="font-mono text-xs font-bold text-rose-400 uppercase tracking-wider block">The Problem to Solve</span>
+              <p>
+                Robotic fleets operating in edge environments experience intermittent network connectivity, bursty upload bandwidth, and cloud API rate limits. Writing raw sensory data directly to cloud object storage over REST APIs causes severe write-amplification, socket connection exhaustion, and frequent data loss during network dropouts, leading to low compute pipeline efficiency.
+              </p>
+            </div>
+
+            <div class="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-2">
+              <span class="font-mono text-xs font-bold text-amber-400 uppercase tracking-wider block">The Solution</span>
+              <ul class="space-y-1.5 list-disc pl-5">
+                <li><strong class="text-white">NVMe Local Tiering:</strong> Buffers incoming streams directly onto ultra-fast local PCIe 5.0 NVMe drives, providing hundreds of gigabytes of fault-tolerant staging memory.</li>
+                <li><strong class="text-white">Asynchronous Micro-Batching:</strong> Groups short-GOP video chunks and Parquet columnar slabs into multi-part object storage payloads, maximizing throughput and reducing S3 PUT API costs by &gt;95%.</li>
+                <li><strong class="text-white">Spatiotemporal Window Slicing:</strong> Extracts 2-second synchronized rollout windows (e.g., 60 video frames + 200 telemetry samples) into memory for downstream latent model encoding.</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- HTML Block Diagram -->
+          <div class="space-y-1.5">
+            <span class="font-mono text-[11px] font-bold text-slate-400 uppercase">Subsystem Block Diagram &bull; Tiered Persistence &amp; Batching</span>
+            
+            <div class="p-6 rounded-2xl bg-slate-950/80 border border-slate-800 font-mono text-[11px] flex flex-col items-center gap-3">
+              <div class="w-full max-w-sm p-3 rounded-xl bg-slate-900 border border-slate-700 text-center text-slate-300">
+                <div class="font-bold text-white mb-1">Serialized Data (Stage 02)</div>
+                <div class="text-[9px] text-slate-500">Short-GOP H.265 Chunks &amp; Parquet Slabs</div>
+              </div>
+
+              <i data-lucide="arrow-down" class="w-4 h-4 text-amber-400"></i>
+
+              <div class="w-full max-w-sm p-3 rounded-xl bg-amber-950/30 border border-amber-500/50 text-center">
+                <div class="font-bold text-amber-300 text-xs">High-Speed Local NVMe Staging Buffer</div>
+                <div class="text-[9px] text-amber-200 mt-1">PCIe 5.0 U.3 NVMe Drives &bull; Bounded FIFO Ring</div>
+              </div>
+
+              <div class="flex w-full max-w-lg justify-around text-amber-500 pt-1">
+                <div class="flex flex-col items-center">
+                  <span class="mb-1 text-[10px] text-amber-300 font-bold">Async S3 Flush</span>
+                  <i data-lucide="arrow-down-left" class="w-4 h-4"></i>
+                </div>
+                <div class="flex flex-col items-center">
+                  <span class="mb-1 text-[10px] text-amber-300 font-bold">2s Window Clamping</span>
+                  <i data-lucide="arrow-down-right" class="w-4 h-4"></i>
+                </div>
+              </div>
+
+              <div class="flex w-full max-w-lg gap-4">
+                <div class="flex-1 p-3 rounded-xl bg-slate-900 border border-slate-700 text-center flex flex-col justify-center">
+                  <span class="text-white font-bold text-xs">Cloud Object Storage</span>
+                  <span class="text-[9px] text-slate-400 mt-1">Cold Storage S3 / Ceph &bull; Byte-Indexed Vaults</span>
+                </div>
+                <div class="flex-1 p-3 rounded-xl bg-slate-900 border border-slate-700 text-center flex flex-col justify-center">
+                  <span class="text-white font-bold text-xs">Spatiotemporal Slicer</span>
+                  <span class="text-[9px] text-slate-400 mt-1">Extracts 2s Dynamic Episodes for Stage 04</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+        <div class="lg:col-span-4 hidden lg:block"></div>
+      </div>
+    </section>
+
+    <!-- STAGE 4 -->
+    <section id="stage-4" data-stage-index="4" class="min-h-screen flex items-center py-24">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 w-full items-center">
+        <div class="lg:col-span-8 stage-card glass-card p-7 sm:p-10 rounded-3xl space-y-6">
+          
+          <div class="border-b border-slate-800 pb-5">
+            <div class="flex flex-wrap items-center gap-3 sm:gap-4 p-3.5 sm:p-4 rounded-2xl bg-emerald-500/15 border border-emerald-500/40 shadow-xl shadow-emerald-500/10">
+              <span class="text-2xl sm:text-4xl font-mono font-black tracking-tight text-emerald-400">STAGE 04</span>
+              <span class="h-6 sm:h-8 w-[3px] bg-emerald-500/50"></span>
+              <span class="text-lg sm:text-2xl font-extrabold tracking-wide text-white uppercase">Vector Retrieval &amp; Storage Vaults</span>
+              <span class="ml-auto text-xs font-mono uppercase px-2.5 py-1 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold">Semantic ANN Seek</span>
+            </div>
+          </div>
+
+          <div>
+            <h2 class="text-xl sm:text-3xl font-extrabold text-white tracking-tight leading-tight">
+              Vector Compression &amp; Sub-Millisecond Vector Retrieval Engine (ANN)
+            </h2>
+            <p class="text-xs sm:text-sm text-emerald-300/90 font-mono mt-1">
+              A petabyte-scale Approximate Nearest Neighbor (ANN) retrieval engine that links continuous mathematical vector spaces to exact cold-storage byte offsets in sub-millisecond query time.
+            </p>
+          </div>
+
+          <!-- Problem & Solution -->
+          <div class="space-y-4 text-xs sm:text-sm text-slate-300 leading-relaxed">
+            <div class="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-1.5">
+              <span class="font-mono text-xs font-bold text-rose-400 uppercase tracking-wider block">The Problem to Solve</span>
+              <p>
+                Autonomous fleets amass petabytes of uncurated operational logs across millions of hours of rollout. Locating specific corner cases or physical failure modes (e.g., &ldquo;wheel slipping on wet metal sheet&rdquo;) requires costly brute-force linear scans over millions of high-dimensional vectors, stalling downstream data loaders. Furthermore, storing raw unquantized vectors for billions of episodes quickly exhausts available server RAM.
+              </p>
+            </div>
+
+            <div class="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-2">
+              <span class="font-mono text-xs font-bold text-emerald-400 uppercase tracking-wider block">The Solution</span>
+              <ul class="space-y-1.5 list-disc pl-5">
+                <li><strong class="text-white">Sub-Millisecond Vector Retrieval:</strong> Performs Approximate Nearest Neighbor (ANN) search to retrieve relevant failure modes and edge cases instantly, reducing query latency from minutes to single-digit milliseconds.</li>
+                <li><strong class="text-white">Vector Compression &amp; Latent Partitioning:</strong> Compresses multimodal trajectory embeddings by up to 32x, enabling year-long fleet history to reside directly in active server RAM.</li>
+                <li><strong class="text-white">Direct Cold Storage Linking:</strong> Bridges semantic index nodes directly to exact byte-range offsets in cloud object vaults.</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- HTML Block Diagram -->
+          <div class="space-y-1.5">
+            <span class="font-mono text-[11px] font-bold text-slate-400 uppercase">Subsystem Block Diagram &bull; ANN Graph Search &amp; Byte Offsets</span>
+            
+            <div class="p-6 rounded-2xl bg-slate-950/80 border border-slate-800 font-mono text-[11px] flex flex-col items-center gap-3">
+              <div class="w-full max-w-sm p-3 rounded-xl bg-slate-900 border border-slate-700 text-center">
+                <div class="text-white font-bold mb-1">Dense Float32 Latent Vector (512-dim)</div>
+                <div class="text-[9px] text-slate-500">From 2-Second Spatiotemporal Rollout Window</div>
+              </div>
+
+              <i data-lucide="arrow-down" class="w-4 h-4 text-emerald-400"></i>
+
+              <div class="w-full max-w-sm p-3 rounded-xl bg-emerald-950/20 border border-emerald-500/40 text-center">
+                <div class="font-bold text-emerald-400 text-xs">Vector Compression &amp; Latent Partitioning</div>
+                <div class="text-[9px] text-emerald-300/70 mt-1">Compresses embedding footprint up to 32x for active memory fit</div>
+              </div>
+
+              <i data-lucide="arrow-down" class="w-4 h-4 text-emerald-400"></i>
+
+              <div class="w-full max-w-sm p-4 rounded-xl bg-emerald-950/30 border border-emerald-500/60 text-center shadow-lg shadow-emerald-500/10 space-y-2">
+                <div class="font-bold text-emerald-300 text-sm">Sub-Millisecond Vector Retrieval Engine (ANN)</div>
+                <div class="text-[10px] text-emerald-200 bg-emerald-900/40 py-1 rounded border border-emerald-500/20">Layer 2: Long-Range Coarse Navigation</div>
+                <div class="text-[10px] text-emerald-200 bg-emerald-900/40 py-1 rounded border border-emerald-500/20">Layer 1: Dense Topological Clustering</div>
+                <div class="text-[10px] text-emerald-200 bg-emerald-900/40 py-1 rounded border border-emerald-500/20">Layer 0: Exact Nearest Neighbors</div>
+              </div>
+
+              <div class="flex w-full max-w-lg justify-around text-emerald-500 pt-2">
+                <i data-lucide="arrow-down-left" class="w-4 h-4"></i>
+                <i data-lucide="arrow-down-right" class="w-4 h-4"></i>
+              </div>
+
+              <div class="flex w-full max-w-lg gap-4">
+                <div class="flex-1 p-3 rounded-xl bg-slate-900 border border-slate-700 text-center flex flex-col justify-center">
+                  <span class="text-white font-bold">In-Memory ANN Search</span>
+                  <span class="text-[9px] text-slate-400 mt-1">Sub-5ms NLP/Physics Queries</span>
+                </div>
+                <div class="flex-1 p-3 rounded-xl bg-slate-900 border border-slate-700 text-center flex flex-col justify-center">
+                  <span class="text-white font-bold">Cold Object S3 Vaults</span>
+                  <span class="text-[9px] text-slate-400 mt-1">Exact Byte-Offset Chunk Slices</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+        <div class="lg:col-span-4 hidden lg:block"></div>
+      </div>
+    </section>
+
+    <!-- STAGE 5 -->
+    <section id="stage-5" data-stage-index="5" class="min-h-screen flex items-center py-24">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 w-full items-center">
+        <div class="lg:col-span-8 stage-card glass-card p-7 sm:p-10 rounded-3xl space-y-6">
+          
+          <div class="border-b border-slate-800 pb-5">
+            <div class="flex flex-wrap items-center gap-3 sm:gap-4 p-3.5 sm:p-4 rounded-2xl bg-purple-500/15 border border-purple-500/40 shadow-xl shadow-purple-500/10">
+              <span class="text-2xl sm:text-4xl font-mono font-black tracking-tight text-purple-400">STAGE 05</span>
+              <span class="h-6 sm:h-8 w-[3px] bg-purple-500/50"></span>
+              <span class="text-lg sm:text-2xl font-extrabold tracking-wide text-white uppercase">Direct-to-GPU Streaming &amp; Zero-Copy Loader</span>
+              <span class="ml-auto text-xs font-mono uppercase px-2.5 py-1 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 font-bold">Zero GPU Starvation</span>
+            </div>
+          </div>
+
+          <div>
+            <h2 class="text-xl sm:text-3xl font-extrabold text-white tracking-tight leading-tight">
+              Kernel-Bypassing Direct Memory Access &amp; Hardware NVDEC Silicon Decompression
+            </h2>
+            <p class="text-xs sm:text-sm text-purple-300/90 font-mono mt-1">
+              A high-throughput distributed ingestion loader that streams exact byte-range slices from storage directly into GPU tensor memory, bypassing host CPU decompression bottlenecks.
+            </p>
+          </div>
+
+          <!-- Problem & Solution -->
+          <div class="space-y-4 text-xs sm:text-sm text-slate-300 leading-relaxed">
+            <div class="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-1.5">
+              <span class="font-mono text-xs font-bold text-rose-400 uppercase tracking-wider block">The Problem to Solve</span>
+              <p>
+                Training generative World Models and VLA policies on distributed NVIDIA H100 clusters requires gigabytes of multimodal data per second. Traditional PyTorch <code class="text-slate-200">DataLoader</code> pipelines use host CPU workers to fetch data over the network, decompress H.265 video chunks via software libraries, serialize tensors across OS pipes, and transfer them over the PCIe bus. Host CPUs spend 80% of their compute capacity decoding video, leaving $30,000 GPUs idle with <strong class="text-purple-300">low tensor utilization</strong>, spending more cycles stalling on data decompression than executing forward and backward passes.
+              </p>
+            </div>
+
+            <div class="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-2">
+              <span class="font-mono text-xs font-bold text-purple-400 uppercase tracking-wider block">The Solution</span>
+              <ul class="space-y-1.5 list-disc pl-5">
+                <li><strong class="text-white">Bypasses CPU Processing:</strong> Offloads video decompression entirely to dedicated silicon engines (NVDEC) on the GPU, freeing host CPU cores for distributed training coordination.</li>
+                <li><strong class="text-white">Direct Bus Transfers:</strong> Uses page-locked host memory and Direct Memory Access (DMA) to stream compressed chunks across PCIe without operating system memory copies.</li>
+                <li><strong class="text-white">Double-Buffered Async CUDA Streams:</strong> Stream 1 stages Batch $N+1$ over DMA while Stream 0 computes forward passes on Batch $N$, sustaining <strong class="text-white">&gt;92% GPU tensor core utilization</strong>.</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- HTML Block Diagram -->
+          <div class="space-y-1.5">
+            <span class="font-mono text-[11px] font-bold text-slate-400 uppercase">Subsystem Block Diagram &bull; PCIe Gen 5 DMA &amp; NVDEC Silicon</span>
+            
+            <div class="p-6 rounded-2xl bg-slate-950/80 border border-slate-800 font-mono text-[11px] flex flex-col items-center gap-3">
+              <div class="w-full max-w-sm p-3 rounded-xl bg-slate-900 border border-slate-700 text-center">
+                <div class="text-white font-bold mb-1">S3 / NVMe Network Storage</div>
+                <div class="text-[9px] text-slate-500">(Targeted Byte-Range Slices via HTTP Range)</div>
+              </div>
+
+              <div class="flex flex-col items-center text-purple-400 text-[10px]">
+                <span class="mb-1">HTTP Range Requests</span>
+                <i data-lucide="arrow-down" class="w-4 h-4"></i>
+              </div>
+
+              <div class="w-full max-w-sm p-3 rounded-xl bg-purple-950/20 border border-purple-500/40 text-center">
+                <div class="font-bold text-purple-400 text-xs">Pinned Host RAM (Page-Locked)</div>
+                <div class="text-[10px] text-purple-300 mt-1 bg-purple-900/40 inline-block px-2 py-0.5 rounded border border-purple-500/30 font-mono">cudaHostAlloc</div>
+              </div>
+
+              <div class="flex flex-col items-center text-purple-400 text-[10px]">
+                <span class="mb-1">Direct Memory Access (DMA) via PCIe Gen 5</span>
+                <i data-lucide="arrow-down" class="w-4 h-4"></i>
+              </div>
+
+              <div class="w-full max-w-lg p-5 rounded-xl bg-slate-900 border-2 border-purple-500/50 shadow-lg shadow-purple-500/10 flex flex-col items-center space-y-4">
+                <div class="text-purple-300 font-black text-sm uppercase tracking-widest border-b border-purple-500/30 pb-2 w-full text-center">NVIDIA H100 SXM5 SILICON</div>
+                
+                <div class="w-full grid grid-cols-2 gap-4">
+                  <div class="p-3 bg-slate-950 rounded-lg border border-slate-700 text-center">
+                    <span class="text-white font-bold text-[10px] block mb-1">NVDEC Silicon</span>
+                    <span class="text-slate-400 text-[9px]">(Hardware H.265 Direct Decode)</span>
+                  </div>
+                  <div class="p-3 bg-slate-950 rounded-lg border border-slate-700 text-center">
+                    <span class="text-white font-bold text-[10px] block mb-1">80 GB HBM3 Memory</span>
+                    <span class="text-slate-400 text-[9px]">(Decoded Frame Tensors in VRAM)</span>
+                  </div>
+                </div>
+
+                <div class="w-full p-3 bg-purple-950/40 rounded-lg border border-purple-500/50 text-center">
+                  <span class="text-purple-300 font-bold text-xs block mb-2">GH100 Tensor Cores (>92% Utilization)</span>
+                  <div class="text-left text-[10px] text-purple-200 space-y-1 inline-block">
+                    <div>&bull; <strong class="text-white">CUDA Stream 0:</strong> Compute Forward/Backward Batch N</div>
+                    <div>&bull; <strong class="text-white">CUDA Stream 1:</strong> Stage &amp; DMA Transfer Batch N+1</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+        <div class="lg:col-span-4 hidden lg:block"></div>
+      </div>
+    </section>
+
+    <!-- SECTION 06: FLEET INFRASTRUCTURE SIZER & PERFORMANCE MODEL -->
+    <section id="sec-economics" class="min-h-screen flex flex-col justify-center py-20 space-y-10">
+      <div class="glass-card p-7 sm:p-10 rounded-3xl border border-slate-800 space-y-8">
+        <div class="flex flex-col sm:flex-row sm:items-end justify-between border-b border-slate-800 pb-4">
+          <div>
+            <span class="text-xs font-mono text-emerald-400 font-bold uppercase flex items-center gap-2">
+              <span>📊</span>
+              <span>06 / Fleet Infrastructure Sizer &amp; Performance Model</span>
+            </span>
+            <h2 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight flex items-center gap-3 mt-1">
+              <span>🤖</span>
+              <span>Interactive Multi-Modal Fleet Equipment Sizer &amp; Performance Model</span>
+            </h2>
+            <p class="text-xs sm:text-sm text-slate-300 mt-2 leading-relaxed font-sans">
+              Configure your robot fleet with their equipped sensors and see how much storage you require and training time you save.
+            </p>
+          </div>
+          <p class="text-xs font-mono text-slate-400 flex items-center gap-1.5 mt-2 sm:mt-0 flex-shrink-0">
+            <span>⚡</span>
+            <span>Dynamic Compute &amp; Throughput Computation</span>
+          </p>
+        </div>
+
+        <!-- 1. ROBOT SENSOR RIG CONFIGURATOR -->
+        <div class="p-6 rounded-3xl bg-slate-900/95 border border-slate-800 space-y-5">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2 text-xs font-mono text-cyan-400 font-bold">
+              <span>🛠️</span>
+              <i data-lucide="sliders" class="w-4 h-4"></i>
+              <span>ROBOT SENSOR RIG CONFIGURATOR (MODALITY &amp; QUANTITY BUILDER)</span>
+            </div>
+            <span class="text-[10px] font-mono px-2.5 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/30">
+              Hardware Layer 🦾
+            </span>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
+            <!-- Camera Config -->
+            <div class="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-3 relative overflow-hidden group hover:border-cyan-500/50 transition">
+              <div class="flex items-center justify-between">
+                <span class="font-mono font-bold text-cyan-400 flex items-center gap-1.5">
+                  <span class="text-base">📹</span>
+                  <span>Primary Vision</span>
+                </span>
+                <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 font-semibold">
+                  RGB Video
+                </span>
+              </div>
+              <div class="space-y-1">
+                <label class="text-[10px] font-mono text-slate-400 block flex items-center gap-1">
+                  <span>🎯</span>
+                  <span>Sensor Model</span>
+                </label>
+                <select id="sel-camera" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono text-white focus:outline-none focus:border-cyan-400">
+                  <option value="0.95">1080p RGB (30 FPS) — 0.95 MB/s</option>
+                  <option value="1.90" selected>1080p RGB Stereo (30 FPS) — 1.90 MB/s</option>
+                  <option value="4.80">4K Surround RGB (30 FPS) — 4.80 MB/s</option>
+                </select>
+              </div>
+              <div class="space-y-1">
+                <label class="text-[10px] font-mono text-slate-400 block flex items-center gap-1">
+                  <span>🔢</span>
+                  <span>Quantity per Robot</span>
+                </label>
+                <input id="qty-camera" type="number" min="1" max="8" value="1" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5 text-xs font-mono text-white focus:outline-none focus:border-cyan-400">
+              </div>
+            </div>
+
+            <!-- IMU Config -->
+            <div class="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-3 relative overflow-hidden group hover:border-indigo-500/50 transition">
+              <div class="flex items-center justify-between">
+                <span class="font-mono font-bold text-indigo-400 flex items-center gap-1.5">
+                  <span class="text-base">🧭</span>
+                  <span>Inertial (IMU)</span>
+                </span>
+                <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-indigo-500/15 text-indigo-300 border border-indigo-500/30 font-semibold">
+                  6-DOF Gyro
+                </span>
+              </div>
+              <div class="space-y-1">
+                <label class="text-[10px] font-mono text-slate-400 block flex items-center gap-1">
+                  <span>🎯</span>
+                  <span>Precision Grade</span>
+                </label>
+                <select id="sel-imu" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono text-white focus:outline-none focus:border-indigo-400">
+                  <option value="0.008">100Hz Standard 6-DOF — 8 KB/s</option>
+                  <option value="0.016" selected>200Hz High-Precision — 16 KB/s</option>
+                  <option value="0.064">1000Hz Tactical Grade — 64 KB/s</option>
+                </select>
+              </div>
+              <div class="space-y-1">
+                <label class="text-[10px] font-mono text-slate-400 block flex items-center gap-1">
+                  <span>🔢</span>
+                  <span>Quantity per Robot</span>
+                </label>
+                <input id="qty-imu" type="number" min="1" max="6" value="1" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5 text-xs font-mono text-white focus:outline-none focus:border-indigo-400">
+              </div>
+            </div>
+
+            <!-- LiDAR Config -->
+            <div class="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-3 relative overflow-hidden group hover:border-emerald-500/50 transition">
+              <div class="flex items-center justify-between">
+                <span class="font-mono font-bold text-emerald-400 flex items-center gap-1.5">
+                  <span class="text-base">📡</span>
+                  <span>LiDAR / Depth</span>
+                </span>
+                <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-semibold">
+                  Point Cloud
+                </span>
+              </div>
+              <div class="space-y-1">
+                <label class="text-[10px] font-mono text-slate-400 block flex items-center gap-1">
+                  <span>🎯</span>
+                  <span>Laser System</span>
+                </label>
+                <select id="sel-lidar" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono text-white focus:outline-none focus:border-emerald-400">
+                  <option value="0.0">None / Mono-Depth VIO — 0.0 MB/s</option>
+                  <option value="0.5" selected>32-Channel Mechanical LiDAR — 0.5 MB/s</option>
+                  <option value="1.8">128-Channel Solid-State LiDAR — 1.8 MB/s</option>
+                </select>
+              </div>
+              <div class="space-y-1">
+                <label class="text-[10px] font-mono text-slate-400 block flex items-center gap-1">
+                  <span>🔢</span>
+                  <span>Quantity per Robot</span>
+                </label>
+                <input id="qty-lidar" type="number" min="0" max="4" value="1" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5 text-xs font-mono text-white focus:outline-none focus:border-emerald-400">
+              </div>
+            </div>
+
+            <!-- Joints Config -->
+            <div class="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-3 relative overflow-hidden group hover:border-amber-500/50 transition">
+              <div class="flex items-center justify-between">
+                <span class="font-mono font-bold text-amber-400 flex items-center gap-1.5">
+                  <span class="text-base">🦾</span>
+                  <span>Joints &amp; Torques</span>
+                </span>
+                <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30 font-semibold">
+                  Proprioception
+                </span>
+              </div>
+              <div class="space-y-1">
+                <label class="text-[10px] font-mono text-slate-400 block flex items-center gap-1">
+                  <span>🎯</span>
+                  <span>Kinematic Rig</span>
+                </label>
+                <select id="sel-joints" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono text-white focus:outline-none focus:border-amber-400">
+                  <option value="0.004">6-Axis Robotic Arm (50Hz) — 4 KB/s</option>
+                  <option value="0.012" selected>Full Humanoid / Quadruped (50Hz) — 12 KB/s</option>
+                  <option value="0.035">Full-Body Exoskeleton (200Hz) — 35 KB/s</option>
+                </select>
+              </div>
+              <div class="space-y-1">
+                <label class="text-[10px] font-mono text-slate-400 block flex items-center gap-1">
+                  <span>🔢</span>
+                  <span>Quantity per Robot</span>
+                </label>
+                <input id="qty-joints" type="number" min="0" max="10" value="1" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5 text-xs font-mono text-white focus:outline-none focus:border-amber-400">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. FLEET CONFIGURATOR SLIDERS -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 rounded-3xl bg-slate-900/50 border border-slate-800">
+          <div class="space-y-2">
+            <div class="flex justify-between text-xs font-mono">
+              <span class="text-slate-400 flex items-center gap-1.5">
+                <span>🤖</span>
+                <span>ACTIVE ROBOT FLEET SIZE:</span>
+              </span>
+              <span id="lbl-robots" class="text-cyan-400 font-bold text-sm">100 Robots</span>
+            </div>
+            <input id="inp-robots" type="range" min="10" max="1000" step="10" value="100" class="w-full accent-cyan-400 bg-slate-800 h-2 rounded-lg cursor-pointer">
+          </div>
+          <div class="space-y-2">
+            <div class="flex justify-between text-xs font-mono">
+              <span class="text-slate-400 flex items-center gap-1.5">
+                <span>⏱️</span>
+                <span>DAILY OPERATIONAL DUTY CYCLE:</span>
+              </span>
+              <span id="lbl-hours" class="text-emerald-400 font-bold text-sm">8 Hours / Day</span>
+            </div>
+            <input id="inp-hours" type="range" min="2" max="24" step="2" value="8" class="w-full accent-emerald-400 bg-slate-800 h-2 rounded-lg cursor-pointer">
+          </div>
+        </div>
+
+        <!-- 3. STORAGE VOLUMES & PROCESSING TIME BOXES -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="p-4 rounded-2xl bg-slate-900/95 border border-slate-800 space-y-1">
+            <div class="flex items-center justify-between text-slate-400">
+              <span class="text-[10px] font-mono uppercase flex items-center gap-1">
+                <span>🎞️</span>
+                <span>Visual Media (H.265)</span>
+              </span>
+              <span class="text-xs">☁️</span>
+            </div>
+            <div id="val-video" class="text-2xl font-black text-cyan-400">5.47 TB / day</div>
+            <span class="text-[10px] font-mono text-slate-500 block">Cold Object Vaults (S3)</span>
+          </div>
+          <div class="p-4 rounded-2xl bg-slate-900/95 border border-slate-800 space-y-1">
+            <div class="flex items-center justify-between text-slate-400">
+              <span class="text-[10px] font-mono uppercase flex items-center gap-1">
+                <span>📊</span>
+                <span>Telemetry (Parquet)</span>
+              </span>
+              <span class="text-xs">💾</span>
+            </div>
+            <div id="val-imu" class="text-2xl font-black text-indigo-400">46.08 GB / day</div>
+            <span class="text-[10px] font-mono text-slate-500 block">Snappy/ZSTD Columnar Slabs</span>
+          </div>
+          <div class="p-4 rounded-2xl bg-slate-900/95 border border-slate-800 space-y-1">
+            <div class="flex items-center justify-between text-slate-400">
+              <span class="text-[10px] font-mono uppercase flex items-center gap-1">
+                <span>🧠</span>
+                <span>Raw Vector Embeddings</span>
+              </span>
+              <span class="text-xs">⚡</span>
+            </div>
+            <div id="val-latent" class="text-2xl font-black text-amber-400">5.76 GB / day</div>
+            <span class="text-[10px] font-mono text-slate-500 block">2-Second Dynamic Episodes</span>
+          </div>
+          <div class="p-4 rounded-2xl bg-emerald-950/30 border border-emerald-500/40 space-y-1">
+            <div class="flex items-center justify-between text-emerald-300">
+              <span class="text-[10px] font-mono uppercase font-bold flex items-center gap-1">
+                <span>🗜️</span>
+                <span>Quantized Vector Index (ANN)</span>
+              </span>
+              <span class="text-xs">🚀</span>
+            </div>
+            <div id="val-pq" class="text-2xl font-black text-emerald-400">184.3 MB / day</div>
+            <span class="text-[10px] font-mono text-emerald-300 block">Sub-5ms In-Memory Graph</span>
+          </div>
+        </div>
+
+        <!-- DYNAMIC E2E PROCESSING TIME COMPARISON BOXES -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+          <div class="p-6 rounded-3xl bg-rose-950/20 border border-rose-500/30 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-mono font-bold uppercase px-2.5 py-1 rounded bg-rose-500/15 text-rose-400 border border-rose-500/30 flex items-center gap-1.5">
+                <span>⚠️</span>
+                <span>Conventional System (Monolithic Bags / S3 / CPU Loader)</span>
+              </span>
+              <i data-lucide="alert-triangle" class="w-4 h-4 text-rose-400"></i>
+            </div>
+            <div id="val-conv-time" class="text-2xl font-black text-rose-400 flex items-center gap-2">
+              <span>⏳</span>
+              <span>14.2 Hours / Training Batch</span>
+            </div>
+            <p class="text-xs text-slate-300 leading-relaxed">
+              Monolithic multi-gigabyte container downloads, host CPU H.265 software decoding, and PCIe saturation resulting in <strong class="text-rose-300">low tensor utilization 🐢</strong>.
+            </p>
+          </div>
+
+          <div class="p-6 rounded-3xl bg-emerald-950/30 border border-emerald-500/40 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-mono font-bold uppercase px-2.5 py-1 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 flex items-center gap-1.5">
+                <span>⚡</span>
+                <span>Optimized Physical AI Pipeline</span>
+              </span>
+              <i data-lucide="zap" class="w-4 h-4 text-emerald-400"></i>
+            </div>
+            <div id="val-lw-time" class="text-2xl font-black text-emerald-400 flex items-center gap-2">
+              <span>🚀</span>
+              <span>3.8 Minutes &bull; 4.8 GB/s Throughput</span>
+            </div>
+            <p class="text-xs text-slate-300 leading-relaxed">
+              Targeted HTTP Range reads, page-locked DMA transfer, and dedicated on-GPU <strong class="text-emerald-300">NVDEC silicon decompression</strong> sustaining <strong class="text-emerald-300">&gt;94% continuous GPU utilization 🏎️💨</strong>.
+            </p>
+          </div>
+        </div>
+
+      </div>
+    </section>
+  </main>
+
+  <footer class="relative z-10 border-t border-slate-800/80 py-8 bg-slate-950/90 text-center text-xs font-mono text-slate-500">
+    <p class="text-slate-300 font-bold">Physical AI Data Engine &bull; System Design Specification</p>
+    <p class="mt-1">Real-Time Multimodal Storage &amp; Latent Retrieval Architecture &bull; Open Systems Engineering Project</p>
+  </footer>
+
+  <!-- THREE.JS & MATRIX BINARY BIT STREAM ENGINE -->
+  <script>
+    lucide.createIcons();
+
+    const canvas = document.getElementById('webgl-bg');
+    let scene, camera, renderer, composer, bloomPass;
+    let gltfLoader, dracoLoader;
+    let robotMixer = null;
+    let loadedTopModel = null;
+
+    const STAGE_Y = [22, 12, 0, -12, -24, -36, -44];
+    const STAGE_NAMES = [
+      'STAGE 00: OPEN ARCHITECTURE HUB',
+      'STAGE 01: EDGE SHM RING BUFFER',
+      'STAGE 02: CLOCK & SPLIT-TIER',
+      'STAGE 03: DISTRIBUTED INGESTION BUS',
+      'STAGE 04: VECTOR RETRIEVAL ENGINE',
+      'STAGE 05: NVIDIA H100 SXM5 DMA',
+      'STAGE 06: FLEET PERFORMANCE SIZER'
+    ];
+
+    const stage0Group = new THREE.Group();
+    const stage1Parts = {};
+    const stage2Parts = {};
+    const stage3Parts = {};
+    const stage4Parts = {};
+    const stage5Parts = {};
+    const linearStreamParticles = [];
+
+    // =========================================================================
+    // PROCEDURAL HIGH-RESOLUTION TEXTURE GENERATORS (PBR COMPLIANT)
+    // =========================================================================
+
+    // 1. Brushed Aluminum / Anodized Metal
+    function createBrushedMetalTextures(colorHex) {
+      const c = document.createElement('canvas');
+      c.width = 512; c.height = 512;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = colorHex || '#1e2638';
+      ctx.fillRect(0, 0, 512, 512);
+
+      for (let i = 0; i < 3000; i++) {
+        const y = Math.random() * 512;
+        const len = 40 + Math.random() * 180;
+        const x = Math.random() * 512;
+        const alpha = 0.04 + Math.random() * 0.08;
+        ctx.strokeStyle = Math.random() > 0.5 ? `rgba(255,255,255,${alpha})` : `rgba(0,0,0,${alpha * 1.5})`;
+        ctx.lineWidth = 0.8 + Math.random() * 1.2;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + len, y);
+        ctx.stroke();
+      }
+
+      const bumpCanvas = document.createElement('canvas');
+      bumpCanvas.width = 512; bumpCanvas.height = 512;
+      const bCtx = bumpCanvas.getContext('2d');
+      bCtx.fillStyle = '#808080';
+      bCtx.fillRect(0, 0, 512, 512);
+      for (let i = 0; i < 3500; i++) {
+        const y = Math.random() * 512;
+        const x = Math.random() * 512;
+        const val = Math.floor(Math.random() * 255);
+        bCtx.fillStyle = `rgba(${val},${val},${val},0.08)`;
+        bCtx.fillRect(x, y, 30 + Math.random() * 90, 1);
+      }
+
+      const diffTex = new THREE.CanvasTexture(c);
+      diffTex.wrapS = diffTex.wrapT = THREE.RepeatWrapping;
+      const bumpTex = new THREE.CanvasTexture(bumpCanvas);
+      bumpTex.wrapS = bumpTex.wrapT = THREE.RepeatWrapping;
+
+      return { map: diffTex, bumpMap: bumpTex };
+    }
+
+    // 2. Multi-Layer Emerald Motherboard PCB with Gold Traces
+    function createPCBTexture() {
+      const c = document.createElement('canvas');
+      c.width = 1024; c.height = 1024;
+      const ctx = c.getContext('2d');
+
+      ctx.fillStyle = '#06261f';
+      ctx.fillRect(0, 0, 1024, 1024);
+
+      ctx.strokeStyle = 'rgba(10, 55, 42, 0.4)';
+      ctx.lineWidth = 1;
+      for (let i = 0; i < 1024; i += 6) {
+        ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, 1024); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(1024, i); ctx.stroke();
+      }
+
+      ctx.strokeStyle = '#10b981';
+      ctx.lineWidth = 2.0;
+      for (let i = 32; i < 1024; i += 48) {
+        ctx.beginPath();
+        ctx.moveTo(i, 0);
+        ctx.lineTo(i, i * 0.5);
+        ctx.lineTo(i + 32, i * 0.5 + 32);
+        ctx.lineTo(i + 32, 1024);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(0, i);
+        ctx.lineTo(i * 0.4, i);
+        ctx.lineTo(i * 0.4 + 24, i + 24);
+        ctx.lineTo(1024, i + 24);
+        ctx.stroke();
+      }
+
+      for (let x = 32; x < 1024; x += 64) {
+        for (let y = 32; y < 1024; y += 64) {
+          ctx.beginPath();
+          ctx.arc(x, y, 6, 0, Math.PI * 2);
+          ctx.fillStyle = '#f59e0b';
+          ctx.fill();
+
+          ctx.beginPath();
+          ctx.arc(x, y, 2.5, 0, Math.PI * 2);
+          ctx.fillStyle = '#02120e';
+          ctx.fill();
+        }
+      }
+
+      ctx.fillStyle = '#e2e8f0';
+      for (let x = 64; x < 1024; x += 128) {
+        for (let y = 64; y < 1024; y += 128) {
+          ctx.fillRect(x - 8, y - 4, 16, 8);
+          ctx.fillStyle = '#94a3b8';
+          ctx.fillRect(x - 3, y - 4, 6, 8);
+          ctx.fillStyle = '#e2e8f0';
+        }
+      }
+
+      const tex = new THREE.CanvasTexture(c);
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      return tex;
+    }
+
+    // 3. Etched GH100 Monolithic Silicon Die Texture
+    function createSiliconDieTexture() {
+      const c = document.createElement('canvas');
+      c.width = 1024; c.height = 1024;
+      const ctx = c.getContext('2d');
+
+      ctx.fillStyle = '#0b111e';
+      ctx.fillRect(0, 0, 1024, 1024);
+
+      ctx.strokeStyle = '#0284c7';
+      ctx.lineWidth = 1.2;
+      for (let x = 0; x <= 1024; x += 32) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 1024); ctx.stroke();
+      }
+      for (let y = 0; y <= 1024; y += 32) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(1024, y); ctx.stroke();
+      }
+
+      ctx.fillStyle = 'rgba(56, 189, 248, 0.08)';
+      for (let x = 16; x < 1024; x += 128) {
+        for (let y = 16; y < 1024; y += 128) {
+          ctx.fillRect(x + 4, y + 4, 120, 120);
+          ctx.strokeStyle = '#38bdf8';
+          ctx.lineWidth = 1.5;
+          ctx.strokeRect(x + 8, y + 8, 112, 112);
+        }
+      }
+
+      ctx.font = 'bold 36px "JetBrains Mono", monospace';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.28)';
+      ctx.textAlign = 'center';
+      ctx.fillText('GH100-SXM5-80GB SILICON', 512, 490);
+      ctx.font = '22px "JetBrains Mono", monospace';
+      ctx.fillText('PHYSICAL AI ACCELERATOR // TSMC 4N', 512, 530);
+
+      const tex = new THREE.CanvasTexture(c);
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      return tex;
+    }
+
+    // 4. Server Bay NVMe Sled Faceplate
+    function createDriveBayTexture() {
+      const c = document.createElement('canvas');
+      c.width = 256; c.height = 512;
+      const ctx = c.getContext('2d');
+
+      ctx.fillStyle = '#0a0f1d';
+      ctx.fillRect(0, 0, 256, 512);
+
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 6;
+      ctx.strokeRect(3, 3, 250, 506);
+
+      ctx.fillStyle = '#030712';
+      for (let y = 60; y < 430; y += 14) {
+        const offset = (Math.floor(y / 14) % 2) * 8;
+        for (let x = 20 + offset; x < 236; x += 16) {
+          ctx.beginPath();
+          ctx.arc(x, y, 4.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      ctx.fillStyle = '#1e293b';
+      ctx.fillRect(30, 440, 196, 42);
+      ctx.strokeStyle = '#475569';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(30, 440, 196, 42);
+
+      ctx.fillStyle = '#10b981';
+      ctx.beginPath();
+      ctx.arc(46, 32, 6, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#38bdf8';
+      ctx.beginPath();
+      ctx.arc(72, 32, 6, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.font = 'bold 16px "JetBrains Mono", monospace';
+      ctx.fillStyle = '#94a3b8';
+      ctx.fillText('NVMe U.3 PCIe 5.0', 96, 36);
+
+      const tex = new THREE.CanvasTexture(c);
+      return tex;
+    }
+
+    // 5. Short-GOP Video Frame Codec Texture
+    function createVideoChunkTexture() {
+      const c = document.createElement('canvas');
+      c.width = 512; c.height = 512;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#09152b';
+      ctx.fillRect(0, 0, 512, 512);
+
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.4)';
+      ctx.lineWidth = 2;
+      for (let y = 0; y < 512; y += 64) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(512, y); ctx.stroke();
+      }
+      for (let x = 0; x < 512; x += 64) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 512); ctx.stroke();
+      }
+
+      ctx.font = 'bold 18px "JetBrains Mono", monospace';
+      ctx.fillStyle = '#38bdf8';
+      ctx.fillText('[IDR_I_FRAME 0.5s GOP]', 32, 44);
+      ctx.font = '13px "JetBrains Mono", monospace';
+      ctx.fillStyle = '#94a3b8';
+      ctx.fillText('HEVC Main10 @ L5.1 // 4K 60FPS', 32, 70);
+      ctx.fillText('ByteRange: 0x000E2000 - 0x004F1800', 32, 92);
+
+      const tex = new THREE.CanvasTexture(c);
+      return tex;
+    }
+
+    // 6. Columnar Parquet Telemetry Block Texture
+    function createParquetTexture() {
+      const c = document.createElement('canvas');
+      c.width = 512; c.height = 512;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#041d14';
+      ctx.fillRect(0, 0, 512, 512);
+
+      ctx.strokeStyle = 'rgba(16, 185, 129, 0.35)';
+      ctx.lineWidth = 2;
+      for (let x = 0; x < 512; x += 85) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 512); ctx.stroke();
+      }
+
+      ctx.fillStyle = '#10b981';
+      for (let y = 30; y < 500; y += 24) {
+        for (let col = 0; col < 6; col++) {
+          const w = 18 + Math.sin(y * 0.1 + col) * 14;
+          ctx.fillRect(col * 85 + 16, y, Math.max(10, w * 1.8), 8);
+        }
+      }
+
+      ctx.font = 'bold 16px "JetBrains Mono", monospace';
+      ctx.fillStyle = '#a7f3d0';
+      ctx.fillText('PARQUET ROWGROUP // SNAPPY', 24, 25);
+
+      const tex = new THREE.CanvasTexture(c);
+      return tex;
+    }
+
+    function loadTopGLTFModel(url) {
+      gltfLoader.load(url, (gltf) => {
+        if (loadedTopModel) stage0Group.remove(loadedTopModel);
+        loadedTopModel = gltf.scene;
+
+        const box = new THREE.Box3().setFromObject(loadedTopModel);
+        const size = new THREE.Vector3();
+        box.getSize(size);
+        const maxDim = Math.max(size.x, size.y, size.z, 0.001);
+        const targetScale = 4.6 / maxDim;
+        loadedTopModel.scale.setScalar(targetScale);
+
+        const center = new THREE.Vector3();
+        box.getCenter(center);
+        loadedTopModel.position.set(-center.x * targetScale, -box.min.y * targetScale - 1.2, -center.z * targetScale);
+
+        loadedTopModel.traverse((child) => {
+          if (child.isMesh && child.material) {
+            child.material.envMapIntensity = 2.2;
+            child.material.metalness = Math.max(child.material.metalness || 0.6, 0.7);
+            child.material.roughness = Math.min(child.material.roughness || 0.4, 0.25);
+          }
+        });
+
+        stage0Group.add(loadedTopModel);
+        if (gltf.animations && gltf.animations.length > 0) {
+          robotMixer = new THREE.AnimationMixer(loadedTopModel);
+          robotMixer.clipAction(gltf.animations[0]).play();
+        }
+      }, undefined, () => {});
+    }
+
+    function init3DTower() {
+      scene = new THREE.Scene();
+      scene.fog = new THREE.FogExp2(0x030712, 0.012);
+
+      camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 200);
+      camera.position.set(0, 20, 23);
+
+      renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'high-performance' });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.35;
+
+      if (THREE.RoomEnvironment) {
+        const pmremGenerator = new THREE.PMREMGenerator(renderer);
+        scene.environment = pmremGenerator.fromScene(new THREE.RoomEnvironment(), 0.04).texture;
+      }
+
+      if (THREE.EffectComposer && THREE.UnrealBloomPass) {
+        const renderScene = new THREE.RenderPass(scene, camera);
+        bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.65, 0.4, 0.75);
+        composer = new THREE.EffectComposer(renderer);
+        composer.addPass(renderScene);
+        composer.addPass(bloomPass);
+      }
+
+      gltfLoader = new THREE.GLTFLoader();
+      if (THREE.DRACOLoader) {
+        dracoLoader = new THREE.DRACOLoader();
+        dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.4.1/');
+        gltfLoader.setDRACOLoader(dracoLoader);
+      }
+
+      scene.add(new THREE.AmbientLight(0xdbeafe, 0.55));
+      const keyLight = new THREE.DirectionalLight(0xffffff, 2.2);
+      keyLight.position.set(24, 38, 30);
+      scene.add(keyLight);
+
+      const rimLight = new THREE.DirectionalLight(0x38bdf8, 1.8);
+      rimLight.position.set(-20, 15, -15);
+      scene.add(rimLight);
+
+      const fillLight = new THREE.DirectionalLight(0x10b981, 1.1);
+      fillLight.position.set(15, -20, 20);
+      scene.add(fillLight);
+
+      // Materials
+      const brushedDark = createBrushedMetalTextures('#0e1628');
+      const brushedSilver = createBrushedMetalTextures('#94a3b8');
+      const brushedCopper = createBrushedMetalTextures('#b45309');
+
+      const darkMetalMat = new THREE.MeshStandardMaterial({
+        color: 0x1a2333,
+        map: brushedDark.map,
+        bumpMap: brushedDark.bumpMap,
+        bumpScale: 0.05,
+        metalness: 0.96,
+        roughness: 0.22,
+        envMapIntensity: 2.0
+      });
+
+      const brushedAlumMat = new THREE.MeshStandardMaterial({
+        color: 0xcfd8dc,
+        map: brushedSilver.map,
+        bumpMap: brushedSilver.bumpMap,
+        bumpScale: 0.04,
+        metalness: 0.98,
+        roughness: 0.14,
+        envMapIntensity: 2.5
+      });
+
+      const copperHeatpipeMat = new THREE.MeshStandardMaterial({
+        color: 0xe07a1e,
+        map: brushedCopper.map,
+        bumpMap: brushedCopper.bumpMap,
+        bumpScale: 0.06,
+        metalness: 0.95,
+        roughness: 0.18,
+        envMapIntensity: 2.2
+      });
+
+      const goldPinMat = new THREE.MeshStandardMaterial({
+        color: 0xf59e0b,
+        metalness: 0.99,
+        roughness: 0.08,
+        emissive: 0x78350f,
+        emissiveIntensity: 0.4,
+        envMapIntensity: 3.0
+      });
+
+      const pcbTexture = createPCBTexture();
+      const pcbMat = new THREE.MeshStandardMaterial({
+        map: pcbTexture,
+        metalness: 0.72,
+        roughness: 0.28,
+        bumpMap: pcbTexture,
+        bumpScale: 0.03,
+        envMapIntensity: 1.8
+      });
+
+      const siliconDieTexture = createSiliconDieTexture();
+      const siliconMat = new THREE.MeshStandardMaterial({
+        map: siliconDieTexture,
+        metalness: 0.94,
+        roughness: 0.12,
+        bumpMap: siliconDieTexture,
+        bumpScale: 0.04,
+        envMapIntensity: 2.8
+      });
+
+      const driveBayTex = createDriveBayTexture();
+      const driveBayMat = new THREE.MeshStandardMaterial({
+        map: driveBayTex,
+        metalness: 0.88,
+        roughness: 0.24,
+        bumpMap: driveBayTex,
+        bumpScale: 0.05,
+        envMapIntensity: 1.9
+      });
+
+      const videoChunkTex = createVideoChunkTexture();
+      const videoChunkMat = new THREE.MeshStandardMaterial({
+        map: videoChunkTex,
+        metalness: 0.85,
+        roughness: 0.2,
+        emissive: 0x0284c7,
+        emissiveIntensity: 0.35
+      });
+
+      const parquetTex = createParquetTexture();
+      const parquetMat = new THREE.MeshStandardMaterial({
+        map: parquetTex,
+        metalness: 0.85,
+        roughness: 0.2,
+        emissive: 0x059669,
+        emissiveIntensity: 0.35
+      });
+
+      const glassMat = new THREE.MeshPhysicalMaterial({
+        color: 0x38bdf8,
+        transparent: true,
+        opacity: 0.32,
+        roughness: 0.06,
+        transmission: 0.75,
+        thickness: 0.8,
+        envMapIntensity: 2.6
+      });
+
+      // TOWER ON THE RIGHT: x = 18.5
+      const spineGroup = new THREE.Group();
+      spineGroup.position.x = 18.5;
+      scene.add(spineGroup);
+      window.towerGroup = spineGroup;
+
+      for (let i = 0; i < 4; i++) {
+        const ang = (i / 4) * Math.PI * 2;
+        const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 76, 24), brushedAlumMat);
+        pipe.position.set(Math.cos(ang) * 1.9, -12, Math.sin(ang) * 1.9);
+        spineGroup.add(pipe);
+      }
+
+      stage0Group.position.set(0, 21, 0);
+      spineGroup.add(stage0Group);
+      loadTopGLTFModel('https://raw.githubusercontent.com/mrdoob/three.js/r128/examples/models/gltf/RobotExpressive/RobotExpressive.glb');
+
+      // STAGE 1
+      const st1 = new THREE.Group();
+      st1.position.set(0, STAGE_Y[1], 0);
+      spineGroup.add(st1);
+
+      stage1Parts.pcb = new THREE.Group();
+      const pcbBase = new THREE.Mesh(new THREE.BoxGeometry(6.4, 0.35, 6.4), pcbMat);
+      stage1Parts.pcb.add(pcbBase);
+
+      const goldConnector = new THREE.Mesh(new THREE.BoxGeometry(5.8, 0.12, 0.4), goldPinMat);
+      goldConnector.position.set(0, -0.22, 3.1);
+      stage1Parts.pcb.add(goldConnector);
+      st1.add(stage1Parts.pcb);
+
+      stage1Parts.ringSlots = new THREE.Group();
+      for (let i = 0; i < 16; i++) {
+        const a = (i / 16) * Math.PI * 2;
+        const segMat = new THREE.MeshStandardMaterial({
+          color: i === 0 ? 0x38bdf8 : 0x1e293b,
+          metalness: 0.9,
+          roughness: 0.15,
+          emissive: i === 0 ? 0x0284c7 : 0x0f172a,
+          emissiveIntensity: i === 0 ? 1.4 : 0.2
+        });
+        const seg = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.42, 0.98), segMat);
+        seg.userData = { angle: a, baseRadius: 2.4 };
+        seg.position.set(Math.cos(a) * 2.4, 0.48, Math.sin(a) * 2.4);
+        stage1Parts.ringSlots.add(seg);
+      }
+      st1.add(stage1Parts.ringSlots);
+
+      stage1Parts.heatsink = new THREE.Group();
+      stage1Parts.heatsink.add(new THREE.Mesh(new THREE.BoxGeometry(4.8, 0.26, 4.8), darkMetalMat));
+
+      for (let hp = -1.2; hp <= 1.2; hp += 1.2) {
+        const heatpipe = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 4.9, 16), copperHeatpipeMat);
+        heatpipe.rotation.z = Math.PI / 2;
+        heatpipe.position.set(0, 0.35, hp);
+        stage1Parts.heatsink.add(heatpipe);
+      }
+
+      for (let f = -2.1; f <= 2.1; f += 0.28) {
+        const fin = new THREE.Mesh(new THREE.BoxGeometry(4.8, 0.95, 0.06), brushedAlumMat);
+        fin.position.set(0, 0.65, f);
+        stage1Parts.heatsink.add(fin);
+      }
+      stage1Parts.heatsink.position.y = 0.95;
+      st1.add(stage1Parts.heatsink);
+
+      // STAGE 2
+      const st2 = new THREE.Group();
+      st2.position.set(0, STAGE_Y[2], 0);
+      spineGroup.add(st2);
+
+      stage2Parts.clockRing = new THREE.Group();
+      const clockMesh = new THREE.Mesh(
+        new THREE.TorusGeometry(2.85, 0.22, 24, 64),
+        new THREE.MeshStandardMaterial({
+          color: 0x818cf8,
+          metalness: 0.92,
+          roughness: 0.1,
+          emissive: 0x4f46e5,
+          emissiveIntensity: 1.2
+        })
+      );
+      stage2Parts.clockRing.add(clockMesh);
+      stage2Parts.clockRing.position.y = 1.65;
+      st2.add(stage2Parts.clockRing);
+
+      stage2Parts.leftVideoChamber = new THREE.Group();
+      const leftBox = new THREE.Mesh(new THREE.BoxGeometry(2.7, 2.8, 3.8), videoChunkMat);
+      stage2Parts.leftVideoChamber.add(leftBox);
+      stage2Parts.leftVideoChamber.position.set(-1.65, -0.4, 0);
+      st2.add(stage2Parts.leftVideoChamber);
+
+      stage2Parts.rightParquetChamber = new THREE.Group();
+      const rightBox = new THREE.Mesh(new THREE.BoxGeometry(2.7, 2.8, 3.8), parquetMat);
+      stage2Parts.rightParquetChamber.add(rightBox);
+      stage2Parts.rightParquetChamber.position.set(1.65, -0.4, 0);
+      st2.add(stage2Parts.rightParquetChamber);
+
+      // STAGE 3
+      const st3 = new THREE.Group();
+      st3.position.set(0, STAGE_Y[3], 0);
+      spineGroup.add(st3);
+
+      stage3Parts.rings = [];
+      [3.2, 2.55, 1.95, 1.35].forEach((r, idx) => {
+        const rMesh = new THREE.Mesh(
+          new THREE.TorusGeometry(r, 0.18, 20, 64),
+          new THREE.MeshStandardMaterial({
+            color: idx % 2 === 0 ? 0xf59e0b : 0x38bdf8,
+            metalness: 0.95,
+            roughness: 0.12,
+            emissive: idx % 2 === 0 ? 0xd97706 : 0x0284c7,
+            emissiveIntensity: 0.9,
+            envMapIntensity: 2.4
+          })
+        );
+        rMesh.rotation.x = Math.PI / 2;
+        rMesh.position.y = (1.5 - idx) * 0.45;
+        st3.add(rMesh);
+        stage3Parts.rings.push(rMesh);
+      });
+
+      stage3Parts.coreGroup = new THREE.Group();
+      const octCore = new THREE.Mesh(
+        new THREE.OctahedronGeometry(1.05, 1),
+        new THREE.MeshStandardMaterial({
+          color: 0xfbbf24,
+          metalness: 0.98,
+          roughness: 0.06,
+          emissive: 0xd97706,
+          emissiveIntensity: 1.4,
+          flatShading: true,
+          envMapIntensity: 3.2
+        })
+      );
+      stage3Parts.coreGroup.add(octCore);
+      st3.add(stage3Parts.coreGroup);
+
+      // STAGE 4
+      const st4 = new THREE.Group();
+      st4.position.set(0, STAGE_Y[4], 0);
+      spineGroup.add(st4);
+
+      stage4Parts.tiers = [];
+      for (let t = 0; t < 3; t++) {
+        const tierGroup = new THREE.Group();
+        const glassShelf = new THREE.Mesh(new THREE.BoxGeometry(4.6 - t * 1.1, 0.14, 4.6 - t * 1.1), glassMat);
+        tierGroup.add(glassShelf);
+
+        const edgeBezel = new THREE.Mesh(new THREE.BoxGeometry(4.68 - t * 1.1, 0.08, 4.68 - t * 1.1), brushedAlumMat);
+        tierGroup.add(edgeBezel);
+
+        tierGroup.position.y = 0.6 + t * 0.85;
+        st4.add(tierGroup);
+        stage4Parts.tiers.push(tierGroup);
+      }
+
+      stage4Parts.vaultChassis = new THREE.Group();
+      stage4Parts.vaultChassis.add(new THREE.Mesh(new THREE.BoxGeometry(5.8, 2.3, 4.1), darkMetalMat));
+
+      stage4Parts.driveBays = [];
+      for (let b = 0; b < 6; b++) {
+        const sled = new THREE.Mesh(new THREE.BoxGeometry(0.76, 1.85, 3.75), driveBayMat);
+        sled.position.set(-2.15 + b * 0.86, 0, 0.1);
+        stage4Parts.vaultChassis.add(sled);
+        stage4Parts.driveBays.push(sled);
+      }
+      stage4Parts.vaultChassis.position.y = -1.45;
+      st4.add(stage4Parts.vaultChassis);
+
+      // STAGE 5
+      const st5 = new THREE.Group();
+      st5.position.set(0, STAGE_Y[5], 0);
+      spineGroup.add(st5);
+
+      stage5Parts.substrate = new THREE.Mesh(new THREE.BoxGeometry(6.9, 0.42, 6.9), pcbMat);
+      stage5Parts.substrate.position.y = -0.8;
+      st5.add(stage5Parts.substrate);
+
+      stage5Parts.tensorDie = new THREE.Group();
+      const mainDie = new THREE.Mesh(new THREE.BoxGeometry(3.5, 0.32, 3.5), siliconMat);
+      stage5Parts.tensorDie.add(mainDie);
+
+      stage5Parts.tensorCells = [];
+      for (let gx = -1.5; gx <= 1.5; gx += 1.0) {
+        for (let gz = -1.5; gz <= 1.5; gz += 1.0) {
+          const cell = new THREE.Mesh(
+            new THREE.BoxGeometry(0.76, 0.26, 0.76),
+            new THREE.MeshStandardMaterial({
+              color: 0x10b981,
+              metalness: 0.95,
+              roughness: 0.1,
+              emissive: 0x059669,
+              emissiveIntensity: 1.4,
+              envMapIntensity: 2.5
+            })
+          );
+          cell.position.set(gx * 0.76, 0.24, gz * 0.76);
+          stage5Parts.tensorDie.add(cell);
+          stage5Parts.tensorCells.push(cell);
+        }
+      }
+      stage5Parts.tensorDie.position.y = -0.35;
+      st5.add(stage5Parts.tensorDie);
+
+      stage5Parts.hbmStacks = [];
+      for (let side of [-1, 1]) {
+        for (let m = -1; m <= 1; m++) {
+          const hbm = new THREE.Mesh(new THREE.BoxGeometry(0.88, 0.58, 0.98), goldPinMat);
+          hbm.userData = { side, baseZ: m * 1.18, baseX: side * 2.4 };
+          hbm.position.set(hbm.userData.baseX, -0.25, hbm.userData.baseZ);
+          st5.add(hbm);
+          stage5Parts.hbmStacks.push(hbm);
+        }
+      }
+
+      stage5Parts.nvdecBridge = new THREE.Mesh(
+        new THREE.BoxGeometry(3.3, 0.3, 0.98),
+        new THREE.MeshStandardMaterial({
+          color: 0x38bdf8,
+          metalness: 0.94,
+          roughness: 0.12,
+          emissive: 0x0284c7,
+          emissiveIntensity: 1.2,
+          envMapIntensity: 2.8
+        })
+      );
+      stage5Parts.nvdecBridge.position.set(0, 0.45, 2.05);
+      st5.add(stage5Parts.nvdecBridge);
+
+      stage5Parts.shroud = new THREE.Group();
+      stage5Parts.shroud.add(new THREE.Mesh(new THREE.BoxGeometry(6.3, 0.92, 6.3), darkMetalMat));
+      stage5Parts.shroud.position.y = 1.15;
+
+      // MATRIX PARTICLES
+      const greenHues = ['#22c55e', '#10b981', '#4ade80', '#86efac', '#15803d', '#22d3ee'];
+      for (let i = 0; i < 240; i++) {
+        const charVal = i % 3 === 0 ? '0' : '1';
+        const chosenColor = greenHues[i % greenHues.length];
+
+        const canvasTex = document.createElement('canvas');
+        canvasTex.width = 64; canvasTex.height = 64;
+        const ctx = canvasTex.getContext('2d');
+        ctx.clearRect(0, 0, 64, 64);
+        ctx.fillStyle = chosenColor; 
+        ctx.font = 'bold 56px monospace'; 
+        ctx.textAlign = 'center'; 
+        ctx.textBaseline = 'middle';
+        ctx.fillText(charVal, 32, 32);
+        const bitTexture = new THREE.CanvasTexture(canvasTex);
+
+        const pMat = new THREE.SpriteMaterial({ map: bitTexture, transparent: true, opacity: 0.92, depthWrite: false });
+        const sprite = new THREE.Sprite(pMat);
+        sprite.scale.set(0.95, 0.95, 0.95);
+        spineGroup.add(sprite);
+
+        const u1 = Math.random();
+        const u2 = Math.random();
+        const gaussianRand = Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
+        const baseSpeed = 0.00015;
+        const speedVar = gaussianRand * 0.00006;
+
+        linearStreamParticles.push({
+          sprite,
+          progress: i / 240,
+          speed: Math.max(0.00005, baseSpeed + speedVar),
+          offsetX: ((i % 5) - 2) * 0.45
+        });
+      }
+
+      window.addEventListener('resize', onWindowResize);
+      onWindowResize();
+    }
+
+    function onWindowResize() {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      if (composer) composer.setSize(window.innerWidth, window.innerHeight);
+      if (window.towerGroup) window.towerGroup.position.x = window.innerWidth < 1024 ? 0 : 18.5;
+    }
+
+    let clock = 0;
+    let smoothScrollY = 20;
+    const threeClock = new THREE.Clock();
+
+    function computeStageProximity(sectionId) {
+      const el = document.getElementById(sectionId);
+      if (!el) return 0;
+      const rect = el.getBoundingClientRect();
+      const viewportCenter = window.innerHeight * 0.5;
+      const sectionCenter = rect.top + rect.height * 0.5;
+      const dist = Math.abs(viewportCenter - sectionCenter);
+      return Math.max(0, Math.min(1, 1 - dist / (window.innerHeight * 0.62)));
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const delta = threeClock.getDelta();
+      clock += 0.025;
+
+      // CONTINUOUS ROTATION ALONG VERTICAL AXIS (Speed 1.5/5 -> 0.003 rad/frame)
+      if (window.towerGroup) {
+        window.towerGroup.rotation.y += 0.003;
+      }
+
+      if (robotMixer) robotMixer.update(delta);
+      if (loadedTopModel) loadedTopModel.rotation.y = Math.sin(clock * 0.5) * 0.35 - 0.35;
+
+      const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+      const scrollFraction = Math.max(0, Math.min(1, window.scrollY / maxScroll));
+      const targetCamY = 20 - scrollFraction * 62;
+      smoothScrollY += (targetCamY - smoothScrollY) * 0.08;
+
+      camera.position.y = smoothScrollY + 2.2;
+      camera.position.x = Math.sin(scrollFraction * Math.PI * 2) * 0.8;
+      camera.lookAt(window.innerWidth < 1024 ? 0 : 8.5, smoothScrollY - 0.5, 0);
+
+      const exp1 = computeStageProximity('stage-1');
+      const exp2 = computeStageProximity('stage-2');
+      const exp3 = computeStageProximity('stage-3');
+      const exp4 = computeStageProximity('stage-4');
+      const exp5 = computeStageProximity('stage-5');
+
+      const exps = [computeStageProximity('sec-hero'), computeStageProximity('sec-solution'), exp1, exp2, exp3, exp4, exp5, computeStageProximity('sec-economics')];
+      let maxIdx = 0, maxVal = 0;
+      exps.forEach((v, idx) => { if (v > maxVal) { maxVal = v; maxIdx = idx; } });
+
+      const hudStageName = document.getElementById('hud-stage-name');
+      if (hudStageName) hudStageName.textContent = STAGE_NAMES[Math.min(maxIdx, STAGE_NAMES.length - 1)];
+
+      const hudStream = document.getElementById('hud-stream');
+      if (hudStream) hudStream.textContent = Math.random() > 0.5 ? '10101001' : '01010110';
+
+      document.querySelectorAll('.scroll-dot').forEach((d, idx) => { d.classList.toggle('active', idx === maxIdx); });
+
+      // Stage 1 Explode
+      if (stage1Parts.heatsink) stage1Parts.heatsink.position.y = 0.95 + exp1 * 2.6;
+      if (stage1Parts.ringSlots) stage1Parts.ringSlots.rotation.y = -clock * 0.8;
+
+      // Stage 2 Explode
+      if (stage2Parts.leftVideoChamber) stage2Parts.leftVideoChamber.position.x = -1.65 - exp2 * 2.15;
+      if (stage2Parts.rightParquetChamber) stage2Parts.rightParquetChamber.position.x = 1.65 + exp2 * 2.15;
+
+      // Stage 3 Explode
+      if (stage3Parts.rings) {
+        stage3Parts.rings.forEach((rMesh, idx) => {
+          rMesh.position.y = (1.5 - idx) * (0.45 + exp3 * 1.3);
+        });
+      }
+
+      // Stage 4 Explode
+      if (stage4Parts.tiers) {
+        stage4Parts.tiers.forEach((tGroup, ti) => {
+          tGroup.position.y = (0.6 + ti * 0.85) + exp4 * (0.85 + ti * 1.2);
+        });
+      }
+      if (stage4Parts.vaultChassis) stage4Parts.vaultChassis.position.y = -1.45 - exp4 * 1.25;
+
+      // Stage 5 Explode
+      if (stage5Parts.shroud) stage5Parts.shroud.position.y = 1.15 + exp5 * 2.9;
+      if (stage5Parts.hbmStacks) {
+        stage5Parts.hbmStacks.forEach((hbm) => {
+          hbm.position.x = hbm.userData.baseX + hbm.userData.side * exp5 * 1.6;
+        });
+      }
+
+      // Linear Stream Flow
+      linearStreamParticles.forEach((p) => {
+        p.progress += p.speed;
+        if (p.progress > 1) p.progress = 0;
+        const py = 25 - p.progress * 80;
+        p.sprite.position.set(p.offsetX, py, 0);
+      });
+
+      if (composer) composer.render();
+      else renderer.render(scene, camera);
+    }
+
+    const inpRobots = document.getElementById('inp-robots');
+    const inpHours = document.getElementById('inp-hours');
+    const selCamera = document.getElementById('sel-camera');
+    const qtyCamera = document.getElementById('qty-camera');
+    const selImu = document.getElementById('sel-imu');
+    const qtyImu = document.getElementById('qty-imu');
+    const selLidar = document.getElementById('sel-lidar');
+    const qtyLidar = document.getElementById('qty-lidar');
+    const selJoints = document.getElementById('sel-joints');
+    const qtyJoints = document.getElementById('qty-joints');
+
+    function updateCalculator() {
+      if (!inpRobots || !inpHours) return;
+      const r = parseInt(inpRobots.value, 10);
+      const h = parseInt(inpHours.value, 10);
+      
+      const lblRobots = document.getElementById('lbl-robots');
+      const lblHours = document.getElementById('lbl-hours');
+      if (lblRobots) lblRobots.textContent = `${r} Robots`;
+      if (lblHours) lblHours.textContent = `${h} Hours / Day`;
+
+      const camMB = parseFloat(selCamera ? selCamera.value : 1.9) * parseInt(qtyCamera ? qtyCamera.value || 1 : 1, 10);
+      const imuMB = parseFloat(selImu ? selImu.value : 0.016) * parseInt(qtyImu ? qtyImu.value || 1 : 1, 10);
+      const lidarMB = parseFloat(selLidar ? selLidar.value : 0.5) * parseInt(qtyLidar ? qtyLidar.value || 1 : 1, 10);
+      const jointMB = parseFloat(selJoints ? selJoints.value : 0.012) * parseInt(qtyJoints ? qtyJoints.value || 1 : 1, 10);
+
+      const totalMBps = camMB + imuMB + lidarMB + jointMB;
+      const sec = r * h * 3600;
+
+      const videoTB = ((camMB + lidarMB) * sec) / 1000000;
+      const imuGB = ((imuMB + jointMB) * sec) / 1000;
+      const latGB = (1.0 * sec) / (1024 * 1024);
+      const pqMB = (32 * sec) / (1024 * 1024);
+      const totalTB = (totalMBps * sec) / 1000000;
+
+      const valVideo = document.getElementById('val-video');
+      const valImu = document.getElementById('val-imu');
+      const valLatent = document.getElementById('val-latent');
+      const valPq = document.getElementById('val-pq');
+      if (valVideo) valVideo.textContent = `${videoTB.toFixed(2)} TB / day`;
+      if (valImu) valImu.textContent = `${imuGB.toFixed(2)} GB / day`;
+      if (valLatent) valLatent.textContent = `${latGB.toFixed(2)} GB / day`;
+      if (valPq) valPq.textContent = `${pqMB.toFixed(1)} MB / day`;
+
+      const convHours = (totalTB * 2.4).toFixed(1);
+      const lwMinutes = (totalTB * 0.38).toFixed(1);
+      const throughputGBs = (totalMBps * 2.5).toFixed(1);
+
+      const valConvTime = document.getElementById('val-conv-time');
+      const valLwTime = document.getElementById('val-lw-time');
+      if (valConvTime) valConvTime.textContent = `${convHours} Hours / Training Batch`;
+      if (valLwTime) valLwTime.textContent = `${lwMinutes} Minutes • ${throughputGBs} GB/s Throughput`;
+    }
+
+    if (inpRobots) inpRobots.addEventListener('input', updateCalculator);
+    if (inpHours) inpHours.addEventListener('input', updateCalculator);
+    if (selCamera) selCamera.addEventListener('change', updateCalculator);
+    if (qtyCamera) qtyCamera.addEventListener('input', updateCalculator);
+    if (selImu) selImu.addEventListener('change', updateCalculator);
+    if (qtyImu) qtyImu.addEventListener('input', updateCalculator);
+    if (selLidar) selLidar.addEventListener('change', updateCalculator);
+    if (qtyLidar) qtyLidar.addEventListener('input', updateCalculator);
+    if (selJoints) selJoints.addEventListener('change', updateCalculator);
+    if (qtyJoints) qtyJoints.addEventListener('input', updateCalculator);
+
+    window.onload = function() {
+      init3DTower();
+      updateCalculator();
+      animate();
+    };
+  </script>
+</body>
+</html>
